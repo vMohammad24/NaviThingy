@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 200 200">
+    <g transform="translate(0,0)">
+        <circle cx="100" cy="100" r="90" fill="#2B3467"/>
+        <path d="M55 145 L55 55 L115 145 L115 55" 
+                    fill="none" stroke="#EB455F" stroke-width="18" 
+                    stroke-linecap="round"
+                    transform="skewX(-5)"/>
+        <path d="M85 55 L155 55 M120 55 L120 145" 
+                    fill="none" stroke="#FCFFE7" stroke-width="18" 
+                    stroke-linecap="round"
+                    transform="skewX(-5)"/>
+    </g>
+</svg>
