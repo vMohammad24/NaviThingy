@@ -1,6 +1,10 @@
 # NaviThingy
 
-A modern cross-platform Navidrome client built with Tauri and Svelte.
+A Navidrome client built with Tauri and Svelte.
+
+## NOTE
+
+This project is still in development. Please report any issues you encounter.
 
 ## Features
 
