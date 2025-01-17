@@ -51,5 +51,13 @@
         "release": "1"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzQzE5MUQwQjA4NTE1NjIKUldSaUZZV3cwSkhCNDhyYU9rRThidFlaQnpyK0dDR0VGQUpLbnZ2NHhLTi8zazJXd2FoMDZhbmkK",
+      "endpoints": [
+        "https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
