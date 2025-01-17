@@ -16,10 +16,9 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-global-shortcut": "~2",
     "@tauri-apps/plugin-opener": "^2",
-    "axios": "^1.7.9",
-    "lucide-svelte": "^0.471.0",
+    "lucide-svelte": "latest",
     "subsonic-api": "^3.1.1",
-    "uuid": "^11.0.5"
+    "uuid": "latest"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "navithingy",
+  "productName": "NaviThingy",
   "version": "0.1.0",
   "identifier": "dev.vmohammad.navithingy",
   "build": {
@@ -39,7 +39,7 @@
     },
     "linux": {
       "appimage": {
-        "bundleMediaFramework": false,
+        "bundleMediaFramework": true,
         "files": {}
       },
       "deb": {

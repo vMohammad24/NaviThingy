@@ -284,7 +284,7 @@
 {#if $player.currentTrack}
   {#if isFullscreen}
     <div
-      class="bg-cover-art"
+      class="fixed inset-0 bg-cover bg-center bg-no-repeat z-20"
       style="background-image: url('{$player.currentTrack.coverArt}')"
       in:fade={{ duration: 1000 }}
     ></div>
