@@ -62,6 +62,8 @@
   class:transform={!minimal}
   class:translate-x-full={!minimal && !$queueVisible}
   class:z-40={!minimal}
+  class:max-h-full={minimal}
+  class:overflow-y-auto={minimal}
 >
   {#if !minimal}
     <header class="p-4 border-b border-primary/20 flex justify-between items-center">

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { setupMediaSession, updateMediaMetadata, updateMediaPlaybackState } from '$lib/mediaSession';
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
   import { queueActions } from '$lib/stores/queueStore';
@@ -99,13 +100,16 @@
       currentTrackId = $player.currentTrack.id;
       playStream($player.currentTrack.id);
       scrollToCurrentLyric();
+      updateMediaMetadata($player.currentTrack);
     } else if (audio && audio.paused) {
       audio.play();
     }
+    updateMediaPlaybackState(true);
   }
 
   $: if (!$player.isPlaying && audio) {
     audio.pause();
+    updateMediaPlaybackState(false);
   }
 
    function playStream(id: string) {
@@ -256,6 +260,7 @@
   }
 
   onMount(() => {
+    setupMediaSession();
     audio = new Audio();
     audio.addEventListener('timeupdate', () => {
       progress = audio.currentTime;
@@ -285,6 +290,9 @@
   {#if isFullscreen}
     <div
       class="fixed inset-0 bg-cover bg-center bg-no-repeat z-20"
+      style="background-image: url('{$player.currentTrack.coverArt}');"
+        >
+      <div class="absolute inset-0 bg-black/50"></div>
       style="background-image: url('{$player.currentTrack.coverArt}')"
       in:fade={{ duration: 1000 }}
     ></div>
@@ -590,14 +598,6 @@
 {/if}
 
 <style>
-  @keyframes slowSpin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
 
   .lyrics-container {
     scrollbar-width: none;  /* Firefox */

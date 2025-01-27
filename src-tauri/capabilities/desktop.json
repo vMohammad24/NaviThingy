@@ -9,7 +9,6 @@
     "main"
   ],
   "permissions": [
-    "global-shortcut:default",
     "updater:default"
   ]
 }

@@ -1,5 +1,4 @@
 import { NavidromeClient } from '$lib/navidrome';
-import { isRegistered, register } from '@tauri-apps/plugin-global-shortcut';
 import type { Child } from 'subsonic-api';
 import { writable } from 'svelte/store';
 import { client as cl } from './client';
@@ -15,28 +14,8 @@ interface PlayerState {
     repeat: RepeatMode;
 }
 
-async function initKeys() {
-    if (await isRegistered('MediaPlayPause')) return;
-    await register('MediaPlayPause', (e) => {
-        console.log('toggle')
-        e.state === 'Pressed' && player.togglePlay();
-    });
-    await register('MediaPause', e => {
-        console.log('pause')
-        e.state === 'Pressed' && player.pause();
-    });
-    await register('MediaPlay', e => {
-        console.log('play')
-        e.state === 'Pressed' && player.play();
-    });
-    await register('MediaStop', e => {
-        console.log('stop')
-        e.state === 'Pressed' && player.stop();
-    });
-}
 function createPlayerStore() {
     let client: NavidromeClient | null = null;
-    initKeys();
     cl.subscribe(cl => {
         if (cl) {
             client = cl;
