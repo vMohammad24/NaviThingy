@@ -10,3 +10,10 @@ export function download(url: string, name: string) {
         document.body.removeChild(link);
     }
 }
+
+export function formatDate(date: Date | string | number) {
+    if (typeof date !== 'object') {
+        date = new Date(date);
+    }
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}

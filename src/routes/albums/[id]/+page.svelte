@@ -82,7 +82,7 @@
             <div class="md:w-2/3 bg-surface rounded-lg p-4">
                 <h2 class="text-xl font-bold mb-4">Songs</h2>
                 <div class="divide-y divide-primary/20">
-                    {#each album.song! as song, i}
+                    {#each album.song?.sort((a,b) => a.track && b.track ? a.track - b.track : 0)! as song, i}
                         <Song {song} index={i} playlist={album.song!} />
                     {/each}
                 </div>

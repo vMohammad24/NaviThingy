@@ -1,9 +1,10 @@
 <script lang="ts">
-    import Album from '$lib/components/Album.svelte';
-    import { client } from '$lib/stores/client';
-    import { Disc } from 'lucide-svelte';
-    import type { Child } from 'subsonic-api';
-    import { onMount } from 'svelte';
+  import { page } from '$app/state';
+  import Album from '$lib/components/Album.svelte';
+  import { client } from '$lib/stores/client';
+  import { Disc } from 'lucide-svelte';
+  import type { Child } from 'subsonic-api';
+  import { onMount } from 'svelte';
 
     interface AlbumViewSettings {
         activeTab: 'newest' | 'highest' | 'frequent' | 'recent' | 'favorites';
@@ -13,7 +14,7 @@
     }
 
     const STORAGE_KEY = 'album_view_settings';
-
+    const genre = page.url.searchParams.get('genre') ?? undefined;
     function loadSettings(): AlbumViewSettings {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -48,7 +49,7 @@
 
     
     const stored = loadSettings();
-    let activeTab = stored.activeTab;
+    let activeTab = page.url.searchParams.get('activeTab') as "newest" | "highest" | "frequent" | "recent" | "favorites"  ?? stored.activeTab;
     let sortBy = stored.sortBy;
     let sortDirection = stored.sortDirection;
     let pageSize = stored.pageSize;
@@ -75,7 +76,8 @@
         try {
             const result = await $client.getAlbums(activeTab, {
                 size: pageSize,
-                offset: currentPage * pageSize
+                offset: currentPage * pageSize,
+                genre
             });
             albums = result.album || [];
             totalAlbums = albums.length === pageSize ? 

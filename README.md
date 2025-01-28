@@ -12,6 +12,6 @@ This project is still in development. Please report any issues you encounter.
 - Cross-platform support (Desktop)
 - Beautiful UI with themes
 - Quick search functionality for artists, albums and songs (Ctrl+K)
-- Synced lyrics support via LRCLIB
+- Synced lyrics support via LRCLIB/Embeded lyrics
 - Multiple theme options (Catppuccin variants included by default)
 - Responsive design

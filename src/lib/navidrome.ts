@@ -25,7 +25,6 @@ export class NavidromeClient {
         })
     }
 
-
     private getURL(method: string, params: Record<string, unknown>) {
         let base = this.api.baseURL();
         const session = this.auth;
@@ -61,8 +60,58 @@ export class NavidromeClient {
         return url.toString();
     }
 
-    async getGenres() {
-        return await this.api.getGenres();
+    async getGenres(): Promise<{
+        value: string;
+        albumCount: number;
+        songCount: number;
+    }[] | undefined> {
+        return (await this.api.getGenres()).genres.genre as any;
+    }
+
+    async getUserData(full: boolean = false) {
+        if (full) return (await this.api.getUser()).user;
+        return {
+            username: this.auth.username,
+        }
+    }
+
+    async getPlaylists() {
+        return (await this.api.getPlaylists()).playlists.playlist;
+    }
+
+    async getPlaylist(id: string) {
+        const playlist = (await this.api.getPlaylist({ id })).playlist;
+        if (playlist.entry) {
+            playlist.entry = playlist.entry.map(song => {
+                if (song.coverArt) {
+                    song.coverArt = this.getAlbumCoverUrl(song.id);
+                }
+                return song;
+            });
+        }
+        return playlist;
+    }
+
+    async createPlaylist(name: string) {
+        return await this.api.createPlaylist({ name });
+    }
+
+    async updatePlaylist(id: string, params: {
+        name?: string;
+        comment?: string;
+        songIdToAdd?: string[];
+        songIndexToRemove?: number[];
+        public?: boolean;
+    }) {
+        return await this.api.updatePlaylist({
+            playlistId: id,
+            ...params,
+        });
+    }
+
+
+    async deletePlaylist(id: string) {
+        return await this.api.deletePlaylist({ id });
     }
 
     async getAlbums(type: 'newest' | 'highest' | 'frequent' | 'recent' | 'favorites', params: {
@@ -74,18 +123,10 @@ export class NavidromeClient {
         musicFolderId?: string;
     }
     ) {
-        const {
-            fromYear,
-            toYear,
-            genre,
-            musicFolderId,
-            size = 10,
-            offset = 0
-        } = params;
         if (type === 'favorites') {
             return (await this.getStarred()) as AlbumList
         }
-        const { albumList } = await this.api.getAlbumList({ type, size, offset, fromYear, genre, musicFolderId, toYear });
+        const { albumList } = await this.api.getAlbumList({ type, ...params });
 
         if (albumList.album) {
             albumList.album = albumList.album.map(album => {

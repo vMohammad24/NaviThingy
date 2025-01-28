@@ -7,11 +7,17 @@
     import type { Child } from 'subsonic-api';
     import ContextMenu from './ContextMenu.svelte';
 
-    let { song, index, playlist, showTrackNumber = true } = $props<{
+    let { song, index, playlist, showTrackNumber = true, extraOptions = [] } = $props<{
         song: Child;
         index: number;
         playlist: Child[];
         showTrackNumber?: boolean;
+        extraOptions?: Array<{
+            label: string;
+            action: () => void;
+            icon?: any;
+            type?: 'separator';
+        }>;
     }>();
 
     let isHovered = $state(false);
@@ -154,6 +160,7 @@
         { label: 'Go to Song', action: () => handleMenuAction('goToSong'), icon: Music },
         { label: 'Go to Album', action: () => handleMenuAction('goToAlbum'), icon: AlbumIcon },
         { type: 'separator' },
+        ...(extraOptions && extraOptions.length > 0 ? [...extraOptions, { type: 'separator' as const }] : []),
         { label: song.starred ? 'Remove from favorites' : 'Favorite', action: () => handleMenuAction('favorite'), icon: song.starred ? HeartCrack : Heart },
         { label: 'Download', action: () => handleMenuAction('download'), icon: Download }
     ]}

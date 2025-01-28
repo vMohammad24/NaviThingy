@@ -1,22 +1,38 @@
 import { writable } from 'svelte/store';
 
-const storedOpenValue = typeof localStorage !== 'undefined'
-    ? localStorage.getItem('sidebarOpen') !== 'false'
-    : true;
+interface SidebarSettings {
+    open: boolean;
+    hidden: boolean;
+}
 
-const storedHiddenValue = typeof localStorage !== 'undefined'
-    ? localStorage.getItem('sidebarHidden') === 'true'
-    : false;
+const STORAGE_KEY = 'sidebarSettings';
 
-export const sidebarOpen = writable(storedOpenValue);
-export const sidebarHidden = writable(storedHiddenValue);
+function loadSettings(): SidebarSettings {
+    if (typeof localStorage === 'undefined') {
+        return { open: true, hidden: false };
+    }
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+        const parsed = JSON.parse(stored);
+        return { ...parsed, hidden: false };
+    }
+    return { open: true, hidden: false };
+}
+
+const settings = loadSettings();
+export const sidebarOpen = writable(settings.open);
+export const sidebarHidden = writable(settings.hidden);
 
 if (typeof localStorage !== 'undefined') {
+    let currentSettings = settings;
+
     sidebarOpen.subscribe(value => {
-        localStorage.setItem('sidebarOpen', value.toString());
+        currentSettings = { ...currentSettings, open: value };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
     });
 
     sidebarHidden.subscribe(value => {
-        localStorage.setItem('sidebarHidden', value.toString());
+        currentSettings = { ...currentSettings, hidden: value };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSettings));
     });
 }
