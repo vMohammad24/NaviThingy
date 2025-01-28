@@ -90,7 +90,7 @@
             in:fly={{ y: 20, duration: 500, delay: 0 }}
             class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-surface p-8"
         >
-            <h1 class="text-4xl font-bold mb-2">Welcome Back {username}</h1>
+            <h1 class="text-4xl font-bold mb-2">Welcome Back, {username}.</h1>
             <!-- <div class="mt-6 flex gap-8 text-sm text-text-secondary">
                 <div>
                     <div class="font-medium text-xl text-text-primary">Some stats title</div>
