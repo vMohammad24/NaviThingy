@@ -56,7 +56,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzQzE5MUQwQjA4NTE1NjIKUldSaUZZV3cwSkhCNDhyYU9rRThidFlaQnpyK0dDR0VGQUpLbnZ2NHhLTi8zazJXd2FoMDZhbmkK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4QTg0NTc0OTdENTA1QkIKUldTN0JkV1hkRVdvT0ZKTzMrOTZTQ0JleEtsamNZYWtGZzFRNmtidzVmd1lyUm5pY2t6ZTAyUWwK",
       "endpoints": [
         "https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json"
       ]
