@@ -27,3 +27,23 @@ serde_json = "1"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+
+[profile.dev]
+incremental = true # Compile your binary in smaller steps.
+codegen-parallel = true # Enable parallel code generation.
+opt-level = 0 # No optimizations in dev builds.
+panic = "unwind" # Keep stack traces for debugging.
+debug = true # Include debug information.
+debug-assertions = true # Enable debug assertions.
+overflow-checks = true # Check for integer overflow.
+parallel-compiler = true # Enable parallel compilation.
+parallel-backend = "rayon" # Use rayon for parallelization.
+codegen-units = 16 # Use 16 threads for code generation.
+
+
+[profile.release]
+codegen-units = 1 # Allows LLVM to perform better optimization.
+lto = true # Enables link-time-optimizations.
+opt-level = "z" # Optimize for size.
+panic = "abort" # Higher performance by disabling panic handlers.
+strip = true # Ensures debug symbols are removed.

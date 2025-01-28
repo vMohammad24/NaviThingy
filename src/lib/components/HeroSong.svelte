@@ -57,10 +57,10 @@
         <div class="md:w-2/3 space-y-4">
             <h2 class="text-4xl font-bold">{song.title}</h2>
             <div class="space-y-2">
-                <a href={`/artist/${song.artistId}`} class="text-2xl text-text-secondary hover:text-primary">
+                <a href={`/artists/${song.artistId}`} class="text-2xl text-text-secondary hover:text-primary">
                     {song.artist}
                 </a>
-                <a href={`/album/${song.albumId}`} class="block text-xl text-text-secondary hover:text-primary">
+                <a href={`/albums/${song.albumId}`} class="block text-xl text-text-secondary hover:text-primary">
                     {song.album}
                 </a>
             </div>

@@ -54,7 +54,7 @@
     }
 
     function navigateToAlbum(id: string) {
-        goto(`/album/${id}`);
+        goto(`/albums/${id}`);
         close();
     }
 </script>
@@ -94,7 +94,7 @@
                         <h3 class="font-bold mb-2">Artists</h3>
                         <div class="space-y-2">
                             {#each searchResults.artist as artist}
-                                <a class="p-2 rounded hover:bg-primary/10 flex items-center gap-3" href={`/artist/${artist.id}`}>
+                                <a class="p-2 rounded hover:bg-primary/10 flex items-center gap-3" href={`/artists/${artist.id}`}>
                                     {#if artist.artistImageUrl}
                                         <img 
                                             src={artist.artistImageUrl} 
@@ -142,7 +142,7 @@
                         <h3 class="font-bold mb-2">Songs</h3>
                         <div class="space-y-2">
                             {#each searchResults.song as song}
-                                <a class="p-2 rounded hover:bg-primary/10 flex items-center gap-3" href={`/song/${song.id}`}>
+                                <a class="p-2 rounded hover:bg-primary/10 flex items-center gap-3" href={`/songs/${song.id}`}>
                                     {#if song.coverArt}
                                         <img 
                                             src={song.coverArt} 

@@ -1,9 +1,7 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import Album from '$lib/components/Album.svelte';
     import { client } from '$lib/stores/client';
-    import { selectedServer } from '$lib/stores/selectedServer';
     import type { ArtistInfo, ArtistWithAlbumsID3 } from 'subsonic-api';
     import { onMount } from "svelte";
 
@@ -16,11 +14,6 @@
     const { id } = page.params;
 
     onMount(async () => {
-        if (!$selectedServer) {
-            goto('/');
-            return;
-        }
-
         try {
             artist = await $client!.getArtist(id);
             loading = false;
@@ -29,10 +22,6 @@
             loading = false;
         }
     });
-
-    function navigateToAlbum(albumId: string) {
-        goto(`/album/${albumId}`);
-    }
 </script>
 
 <div class="container mx-auto p-4">

@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import Song from '$lib/components/Song.svelte';
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
-  import { selectedServer } from '$lib/stores/selectedServer';
   import { Play } from 'lucide-svelte';
   import type { Child, SimilarSongs } from 'subsonic-api';
   import { onMount } from "svelte";
@@ -18,11 +16,6 @@
   const { id } = page.params;
 
   onMount(async () => {
-      if (!$selectedServer) {
-          goto('/');
-          return;
-      }
-
       try {
           songData = await $client!.getSong(id);
           loading = false;
@@ -61,7 +54,7 @@
                 </div>
                 <div class="mt-4">
                     <h1 class="text-3xl font-bold">{songData.song.title}</h1>
-                    <a class="text-text-secondary mt-2" href={`/artist/${songData.song.artistId}`}>{songData.song.artist}</a>
+                    <a class="text-text-secondary mt-2" href={`/artists/${songData.song.artistId}`}>{songData.song.artist}</a>
                     <p class="text-text-secondary">{songData.song.year}</p>
                 </div>
             </div>

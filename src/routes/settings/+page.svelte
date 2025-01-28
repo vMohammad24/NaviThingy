@@ -2,6 +2,8 @@
   import { download } from '$lib/client/util';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import { selectedServer } from '$lib/stores/selectedServer';
+  import { servers } from '$lib/stores/servers';
   import { theme } from '$lib/stores/theme';
   import type { Theme } from '$lib/types/theme';
     
@@ -112,10 +114,61 @@
         }
         window.location.reload();
     }
+
+    function handleServerSwitch(serverId: string) {
+        const server = $servers.find(s => s.id === serverId);
+        if (server) {
+            selectedServer.select(server, true);
+            window.location.reload();
+        }
+    }
+
+    function handleServerRemove(serverId: string) {
+        if ($selectedServer?.id === serverId) {
+            selectedServer.clear();
+        }
+        servers.remove(serverId);
+    }
 </script>
 
 <div class="max-w-2xl mx-auto">
     <h1 class="text-3xl font-bold mb-8">Settings</h1>
+
+    <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
+        <h2 class="text-xl font-semibold mb-4">Server Settings</h2>
+        <div class="space-y-4">
+            {#each $servers as server}
+                <div class="flex items-center justify-between p-4 rounded-lg bg-background">
+                    <div>
+                        <h3 class="font-medium">{server.name}</h3>
+                        <p class="text-sm text-text-secondary">{server.url}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            class="px-3 py-1 rounded-lg text-sm font-medium {$selectedServer?.id === server.id ? 'bg-primary text-background' : 'bg-surface'}"
+                            on:click={() => handleServerSwitch(server.id)}
+                            disabled={$selectedServer?.id === server.id}
+                        >
+                            {$selectedServer?.id === server.id ? 'Current' : 'Switch'}
+                        </button>
+                        <button
+                            class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20"
+                            on:click={() => handleServerRemove(server.id)}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            {/each}
+            
+            <a
+                href="/"
+                class="block text-center px-4 py-2 rounded-lg bg-primary text-background hover:opacity-90"
+            >
+                Add New Server
+            </a>
+        </div>
+    </div>
 
     <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
         <div class="flex justify-between items-center mb-4">

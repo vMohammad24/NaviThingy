@@ -1,71 +1,8 @@
-import { SubsonicAPI, type Child } from 'subsonic-api';
+import { SubsonicAPI, type AlbumList, type Child } from 'subsonic-api';
 import type { LRCLIBResponse, LyricsResult, NavidromeServer, SyncedLyric } from './types/navidrome';
-
-class CacheManager {
-    private db: IDBDatabase | null = null;
-    private readonly DB_NAME = 'navidrome_cache';
-    private readonly STORE_NAME = 'api_cache';
-    private readonly EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
-
-    async init() {
-        if (this.db) return;
-
-        return new Promise<void>((resolve, reject) => {
-            const request = indexedDB.open(this.DB_NAME, 1);
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                this.db = request.result;
-                resolve();
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                const store = db.createObjectStore(this.STORE_NAME, { keyPath: 'key' });
-                store.createIndex('timestamp', 'timestamp');
-            };
-        });
-    }
-
-    async get<T>(key: string): Promise<T | null> {
-        await this.init();
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction(this.STORE_NAME, 'readonly');
-            const store = transaction.objectStore(this.STORE_NAME);
-            const request = store.get(key);
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                const data = request.result;
-                if (!data || Date.now() - data.timestamp > this.EXPIRATION_TIME) {
-                    resolve(null);
-                    return;
-                }
-                resolve(data.value);
-            };
-        });
-    }
-
-    async set(key: string, value: any): Promise<void> {
-        await this.init();
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction(this.STORE_NAME, 'readwrite');
-            const store = transaction.objectStore(this.STORE_NAME);
-            const request = store.put({
-                key,
-                value,
-                timestamp: Date.now()
-            });
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => resolve();
-        });
-    }
-}
 
 export class NavidromeClient {
     private api: SubsonicAPI;
-    private cache: CacheManager;
     private auth: {
         username: string;
         password: string;
@@ -86,7 +23,6 @@ export class NavidromeClient {
             this.auth.token = s.subsonicToken;
             this.auth.subsonicSalt = s.subsonicSalt;
         })
-        this.cache = new CacheManager();
     }
 
 
@@ -125,39 +61,31 @@ export class NavidromeClient {
         return url.toString();
     }
 
-    private async getCached<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
-        const cached = await this.cache.get<T>(key);
-        if (cached) return cached;
-
-        const data = await fetcher();
-        await this.cache.set(key, data);
-        return data;
+    async getGenres() {
+        return await this.api.getGenres();
     }
 
-    async getRecentAlbums(size = 20) {
-        return this.getCached(`recent_albums_${size}`, async () => {
-            const { albumList } = await this.api.getAlbumList({
-                type: 'newest',
-                size
-            });
-
-            if (albumList.album) {
-                albumList.album = albumList.album.map(album => {
-                    if (album.coverArt) {
-                        album.coverArt = this.getAlbumCoverUrl(album.id);
-                    }
-                    return album;
-                });
-            }
-            return albumList;
-        });
+    async getAlbums(type: 'newest' | 'highest' | 'frequent' | 'recent' | 'favorites', params: {
+        size?: number;
+        offset?: number;
+        fromYear?: number;
+        toYear?: number;
+        genre?: string;
+        musicFolderId?: string;
     }
-
-    async getTopAlbums(size = 20) {
-        const { albumList } = await this.api.getAlbumList({
-            type: 'highest',
-            size
-        });
+    ) {
+        const {
+            fromYear,
+            toYear,
+            genre,
+            musicFolderId,
+            size = 10,
+            offset = 0
+        } = params;
+        if (type === 'favorites') {
+            return (await this.getStarred()) as AlbumList
+        }
+        const { albumList } = await this.api.getAlbumList({ type, size, offset, fromYear, genre, musicFolderId, toYear });
 
         if (albumList.album) {
             albumList.album = albumList.album.map(album => {
@@ -255,6 +183,10 @@ export class NavidromeClient {
         return { artist, artistInfo };
     }
 
+    async getArtists() {
+        return (await this.api.getArtists()).artists;
+    }
+
     async getSong(id: string) {
         const { song } = await this.api.getSong({ id });
         const { similarSongs } = await this.api.getSimilarSongs({ id });
@@ -287,42 +219,6 @@ export class NavidromeClient {
         }
 
         return randomSongs;
-    }
-
-    async getMostPlayed(size = 20) {
-        const { albumList } = await this.api.getAlbumList({
-            type: 'frequent',
-            size
-        });
-
-        if (albumList.album) {
-            albumList.album = albumList.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
-        }
-
-        return albumList;
-    }
-
-    async getRecentlyPlayed(size = 20) {
-        const { albumList } = await this.api.getAlbumList({
-            type: 'recent',
-            size
-        });
-
-        if (albumList.album) {
-            albumList.album = albumList.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
-        }
-
-        return albumList;
     }
 
     async getStarred() {

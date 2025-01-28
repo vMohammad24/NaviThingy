@@ -1,4 +1,3 @@
-
 import { writable } from 'svelte/store';
 import type { NavidromeServer } from '../types/navidrome';
 
@@ -25,6 +24,11 @@ function createServersStore() {
         }),
         update: (server: NavidromeServer) => update(servers => {
             const newServers = servers.map(s => s.id === server.id ? server : s);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newServers));
+            return newServers;
+        }),
+        edit: (id: string, updates: Partial<NavidromeServer>) => update(servers => {
+            const newServers = servers.map(s => s.id === id ? { ...s, ...updates } : s);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newServers));
             return newServers;
         })

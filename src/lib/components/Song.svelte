@@ -67,13 +67,13 @@
                 player.addToQueue(song);
                 break;
             case 'goToArtist':
-                if (song.artistId) goto(`/artist/${song.artistId}`);
+                if (song.artistId) goto(`/artists/${song.artistId}`);
                 break;
             case 'goToSong':
-                goto(`/song/${song.id}`);
+                goto(`/songs/${song.id}`);
                 break;
             case 'goToAlbum':
-                if (song.albumId) goto(`/album/${song.albumId}`);
+                if (song.albumId) goto(`/albums/${song.albumId}`);
                 break;
             case 'download':
                 download($client!.download(song.id), `${song.artist} - ${song.title}`);
@@ -111,18 +111,32 @@
             onclick={togglePlay}
         >
             {#if isCurrentlyPlaying(song)}
-                <Pause size={20} />
+                <Pause size={24} />
             {:else}
-                <Play size={20} />
+                <Play size={24} />
             {/if}
         </button>
     {:else if showTrackNumber}
-        <span class="w-6 text-right">{song.track ?? (index + 1)}</span>
+        <span class="w-6 text-right">{(index + 1)}</span>
     {/if}
     {#if song.coverArt}
         <img src={song.coverArt} alt={song.title} class="w-12 h-12 rounded object-cover" />
     {/if}
-    <span class="flex-grow relative z-10">{song.title}</span>
+    <div class="flex-grow flex flex-col relative z-10">
+        <div class="flex items-center gap-2">
+            <span class="font-medium">{song.title}</span>
+            {#if song.starred}
+                <Heart class="text-primary" size={16} />
+            {/if}
+        </div>
+        <div class="flex items-center text-sm text-text-secondary">
+            <span>{song.artist}</span>
+            {#if song.album}
+                <span class="mx-1">•</span>
+                <span>{song.album}</span>
+            {/if}
+        </div>
+    </div>
     <span class="text-text-secondary text-sm w-20 text-right relative z-10">{song.bitRate ?? 'unknown'} kbps</span>
     <span class="text-text-secondary w-16 text-right relative z-10">{formatDuration(song.duration!)}</span>
 </div>

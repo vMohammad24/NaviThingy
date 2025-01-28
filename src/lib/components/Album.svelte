@@ -56,11 +56,9 @@
             break;
         case 'favorite':
                 if(album.starred) {
-                    console.log('unstar');
                     $client!.unstar(album.id, 'track');
                     reloadComponent();
                 } else {
-                    console.log('star');
                     $client!.star(album.id, 'album');
                     album.starred = new Date();
                 }
@@ -87,7 +85,7 @@
 <a 
     class="rounded-lg overflow-hidden shadow-md transition-all duration-200 hover:shadow-xl relative group bg-surface"
     on:contextmenu={handleContextMenu}
-    href="/album/{album.id}"
+    href="/albums/{album.id}"
     on:mouseenter={() => isHovered = true}
     on:mouseleave={() => isHovered = false}
 >

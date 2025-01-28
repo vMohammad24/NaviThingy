@@ -4,6 +4,7 @@
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
   import { queueActions } from '$lib/stores/queueStore';
+  import { sidebarHidden } from '$lib/stores/sidebarOpen';
   import type { SyncedLyric } from '$lib/types/navidrome';
   import {
     ListMusic, Maximize2,
@@ -207,9 +208,10 @@
 
   async function toggleFullscreen() {
     isFullscreen = !isFullscreen;
+    sidebarHidden.set(isFullscreen);
     if (isFullscreen && $player.currentTrack) {
       if($client)
-      lyrics = await $client.getLyrics($player.currentTrack!);
+        lyrics = await $client.getLyrics($player.currentTrack!);
       scrollToCurrentLyric();
     }
   }
@@ -358,16 +360,16 @@
             />
             <div class="flex flex-col flex-1">
               <a class="text-2xl font-bold text-text-secondary hover:text-primary" 
-                href="/song/{$player.currentTrack.id}" 
+                href="/songs/{$player.currentTrack.id}" 
                 on:click={toggleFullscreen}
               >{$player.currentTrack.title}</a>
               <a class="text-xl text-text-secondary hover:text-primary" 
-                href="/artist/{$player.currentTrack.artistId}" 
+                href="/artists/{$player.currentTrack.artistId}" 
                 on:click={toggleFullscreen}
               >{$player.currentTrack.artist}</a>
               {#if $player.currentTrack.album}
                 <a class="text-lg text-text-secondary hover:text-primary mt-1" 
-                  href="/album/{$player.currentTrack.albumId}" 
+                  href="/albums/{$player.currentTrack.albumId}" 
                   on:click={toggleFullscreen}
                 >{$player.currentTrack.album}</a>
               {/if}
@@ -481,8 +483,8 @@
                 in:fade
               />
               <div class="min-w-0 flex flex-col">
-                <a class="font-medium truncate" href="/song/{$player.currentTrack.id}">{$player.currentTrack.title}</a>
-                <a class="text-sm text-text-secondary truncate" href="/artist/{$player.currentTrack.artistId}">{$player.currentTrack.artist}</a>
+                <a class="font-medium truncate" href="/songs/{$player.currentTrack.id}">{$player.currentTrack.title}</a>
+                <a class="text-sm text-text-secondary truncate" href="/artists/{$player.currentTrack.artistId}">{$player.currentTrack.artist}</a>
               </div>
             {/if}
           </div>

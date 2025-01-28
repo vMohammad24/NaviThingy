@@ -1,9 +1,7 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
     import Album from '$lib/components/Album.svelte';
     import HeroSong from '$lib/components/HeroSong.svelte';
     import { client } from '$lib/stores/client';
-    import { selectedServer } from '$lib/stores/selectedServer';
     import type { Child } from 'subsonic-api';
     import { onMount } from 'svelte';
 
@@ -22,9 +20,9 @@
         try {
             const [random, recent, top, played] = await Promise.all([
                 $client.getRandomSongs(1),
-                $client.getRecentAlbums(12),
-                $client.getMostPlayed(12),
-                $client.getRecentlyPlayed(12)
+                $client.getAlbums('newest', 12),
+                $client.getAlbums('frequent', 12),
+                $client.getAlbums('recent', 12)
             ]);
             
             randomSong = random.song![0];
@@ -39,10 +37,6 @@
     }
 
     onMount(async () => {
-        if (!$selectedServer) {
-            goto('/');
-            return;
-        }
         await loadData();
     });
 

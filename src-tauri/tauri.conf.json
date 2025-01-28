@@ -13,10 +13,11 @@
     "windows": [
       {
         "title": "NaviThingy",
+        "decorations": false,
         "width": 800,
         "height": 600,
         "userAgent": "NaviThingy",
-        "additionalBrowserArgs": "--disk-cache-size=504857600 --enable-features=GlobalMediaControls,GlobalMediaControlsPictureInPicture"
+        "additionalBrowserArgs": "--disk-cache-size=504857600"
       }
     ],
     "security": {

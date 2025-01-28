@@ -74,7 +74,7 @@
                 </div>
                 <div class="mt-4">
                     <h1 class="text-3xl font-bold">{album.name}</h1>
-                    <a class="text-text-secondary mt-2" href={`/artist/${album.artistId}`}>{album.artist}</a>
+                    <a class="text-text-secondary mt-2" href={`/artists/${album.artistId}`}>{album.artist}</a>
                     <p class="text-text-secondary">{album.year}</p>
                 </div>
             </div>
