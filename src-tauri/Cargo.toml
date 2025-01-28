@@ -1,8 +1,8 @@
 [package]
 name = "navithingy"
 version = "0.2.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "A navidrome client for desktop made by vMohammad"
+authors = ["vMohammad"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -30,14 +30,11 @@ tauri-plugin-updater = "2"
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.
-codegen-parallel = true # Enable parallel code generation.
 opt-level = 0 # No optimizations in dev builds.
 panic = "unwind" # Keep stack traces for debugging.
 debug = true # Include debug information.
 debug-assertions = true # Enable debug assertions.
 overflow-checks = true # Check for integer overflow.
-parallel-compiler = true # Enable parallel compilation.
-parallel-backend = "rayon" # Use rayon for parallelization.
 codegen-units = 16 # Use 16 threads for code generation.
 
 
