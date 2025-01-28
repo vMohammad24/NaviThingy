@@ -1,12 +1,13 @@
 <script lang="ts">
   import { download } from '$lib/client/util';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
-  import Modal from '$lib/components/Modal.svelte';
   import { player } from '$lib/stores/player';
   import { selectedServer } from '$lib/stores/selectedServer';
   import { servers } from '$lib/stores/servers';
   import { theme } from '$lib/stores/theme';
   import type { Theme } from '$lib/types/theme';
+  import { relaunch } from '@tauri-apps/plugin-process';
+  import { check } from '@tauri-apps/plugin-updater';
     
     $: currentTheme = theme.themes.find(t => t.id === $theme);
     let customTheme = { ...currentTheme, name: '' };
@@ -22,6 +23,14 @@
     };
 
     let isCreating = false;
+    let checking = false;
+    let updateAvailable = false;
+    let updateError: string | null = null;
+    let downloadProgress = {
+        downloaded: 0,
+        total: 0,
+        status: null as 'Started' | 'Progress' | 'Finished' | null
+    };
 
     function handleContextMenu(event: MouseEvent, t: Theme) {
         event.preventDefault();
@@ -129,6 +138,54 @@
             selectedServer.clear();
         }
         servers.remove(serverId);
+    }
+
+    async function checkForUpdates() {
+        checking = true;
+        updateError = null;
+        try {
+            const update = await check();
+            updateAvailable = update?.available || false;
+        } catch (e) {
+            updateError = (e as Error).message;
+        } finally {
+            checking = false;
+        }
+    }
+
+    async function handleUpdateClick() {
+        if (updateAvailable) {
+            if (confirm('Do you want to download and install the update?')) {
+                try {
+                    const update = await check();
+                    if (update) {
+                        await update.downloadAndInstall((progress) => {
+                            downloadProgress.status = progress.event;
+                            switch (progress.event) {
+                                case 'Started':
+                                    downloadProgress = {
+                                        downloaded: 0,
+                                        total: progress.data.contentLength || 0,
+                                        status: 'Started'
+                                    };
+                                    break;
+                                case 'Progress':
+                                    downloadProgress.downloaded += progress.data.chunkLength;
+                                    break;
+                                case 'Finished':
+                                    relaunch();
+                                    break;
+                            }
+                        });
+                    }
+                } catch (e) {
+                    updateError = (e as Error).message;
+                    downloadProgress = { downloaded: 0, total: 0, status: null };
+                }
+            }
+        } else {
+            checkForUpdates();
+        }
     }
 </script>
 
@@ -282,62 +339,48 @@
 
     </div>
 
-    <Modal bind:show={showCustomThemeEditor}>
-        <div class="p-6 bg-background">
-            <h3 class="text-lg font-semibold mb-4">
-                {isCreating ? 'Create New Theme' : 'Customize Theme'}
-            </h3>
-            <div class="space-y-4">
+    <div class="rounded-lg p-6 shadow-lg bg-surface">
+        <h2 class="text-xl font-semibold mb-4">Build Information</h2>
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
                 <div>
-                    <label class="block mb-1">Theme Name
-                        <input
-                            type="text"
-                            bind:value={customTheme.name}
-                            class="w-full p-2 rounded color-text bg-surface"
-                        />
-                    </label>
+                    <h3 class="font-medium">Version</h3>
+                    <p class="text-sm text-text-secondary">0.2.0</p>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    {#each Object.entries(customTheme.colors) as [key, value]}
-                        <div>
-                            <label class="block mb-1 capitalize">{key}
-                                <div class="relative">
-                                    <input
-                                        type="color"
-                                        bind:value={customTheme.colors[key]}
-                                        class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                                    />
-                                    <div class="flex gap-2 p-2 rounded bg-surface">
-                                        <div class="w-6 h-6 rounded" style:background-color={value as any}></div>
-                                        <input
-                                            type="text"
-                                            bind:value={customTheme.colors[key]}
-                                            class="flex-1 bg-transparent"
-                                        />
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    {/each}
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button
-                        class="px-4 py-2 rounded-lg font-medium bg-surface hover:opacity-90"
-                        on:click={() => showCustomThemeEditor = false}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        class="px-4 py-2 rounded-lg font-medium bg-primary text-background hover:opacity-90"
-                        disabled={!customTheme.name}
-                        on:click={handleThemeSave}
-                    >
-                        Save Theme
-                    </button>
-                </div>
+                <button
+                    class="px-3 py-1 rounded-lg text-sm font-medium transition-all {checking ? 'bg-surface' : updateAvailable ? 'bg-green-500 text-background' : 'bg-primary text-background'}"
+                    on:click={handleUpdateClick}
+                    disabled={checking || downloadProgress.status !== null}
+                >
+                    {#if downloadProgress.status === 'Started'}
+                        Starting Download...
+                    {:else if downloadProgress.status === 'Progress'}
+                        Downloading... ({Math.round((downloadProgress.downloaded / downloadProgress.total) * 100)}%)
+                    {:else if downloadProgress.status === 'Finished'}
+                        Restarting...
+                    {:else if checking}
+                        Checking...
+                    {:else if updateAvailable}
+                        Install Update
+                    {:else}
+                        Check for Updates
+                    {/if}
+                </button>
             </div>
+            {#if downloadProgress.status}
+                <div class="w-full h-2 bg-surface rounded-full overflow-hidden">
+                    <div 
+                        class="h-full bg-primary transition-all duration-300"
+                        style="width: {downloadProgress.status === 'Finished' ? 100 : 
+                               downloadProgress.status === 'Progress' ? (downloadProgress.downloaded / downloadProgress.total) * 100 : 0}%"
+                    ></div>
+                </div>
+            {/if}
+            {#if updateError}
+                <p class="text-sm text-red-500">{updateError}</p>
+            {/if}
         </div>
-    </Modal>
+    </div>
 </div>
 
 <style>

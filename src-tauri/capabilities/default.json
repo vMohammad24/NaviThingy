@@ -9,10 +9,19 @@
     "core:default",
     "opener:default",
     "core:window:default",
+    "updater:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-start-dragging",
     "core:window:allow-toggle-maximize",
-    "core:window:allow-internal-toggle-maximize"
+    "core:window:allow-internal-toggle-maximize",
+    "updater:allow-check",
+    "updater:deny-check",
+    "updater:allow-download",
+    "updater:deny-download",
+    "updater:allow-download-and-install",
+    "updater:deny-download-and-install",
+    "updater:allow-install",
+    "updater:deny-install"
   ]
 }
