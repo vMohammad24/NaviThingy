@@ -2,7 +2,7 @@
   import { download } from '$lib/client/util';
   import { client } from '$lib/stores/client';
   import { player } from "$lib/stores/player";
-  import { Pause, Play } from 'lucide-svelte';
+  import { ArrowUpWideNarrow, Download, Heart, HeartCrack, Pause, Play } from 'lucide-svelte';
   import type { Child } from "subsonic-api";
   import ContextMenu from './ContextMenu.svelte';
 
@@ -26,6 +26,12 @@
       y: e.clientY
     };
   }
+  let show = true;
+
+  function reloadComponent() {
+    show = false;
+    setTimeout(() => show = true, 0); // Re-insert in next tick
+  }
 
   async function handleMenuAction(action: string) {
     if (!$client) return;
@@ -47,6 +53,18 @@
             const albumDetails = await $client.getAlbumDetails(album.id);
             if(albumDetails.song)
             player.addToQueue(albumDetails.song);
+            break;
+        case 'favorite':
+                if(album.starred) {
+                    console.log('unstar');
+                    $client!.unstar(album.id, 'track');
+                    reloadComponent();
+                } else {
+                    console.log('star');
+                    $client!.star(album.id, 'album');
+                    album.starred = new Date();
+                }
+            break;
     }
     
     contextMenu.show = false;
@@ -117,11 +135,12 @@
     x={contextMenu.x}
     y={contextMenu.y}
     items={[
-        { label: 'Play', action: () => handleMenuAction('play') },
-        { label: 'Play shuffled', action: () => handleMenuAction('playShuffled') },
-        {label: 'Add to queue', action: () => handleMenuAction('queue')},
+        { label: 'Play', action: () => handleMenuAction('play'), icon: Play },
+        { label: 'Play shuffled', action: () => handleMenuAction('playShuffled'), icon: Play },
+        { label: 'Add to queue', action: () => handleMenuAction('queue'), icon: ArrowUpWideNarrow },
         { type: 'separator' },
-        { label: 'Download', action: () => handleMenuAction('download') },
+        { label: album.starred ? 'Remove from favorites' : 'Favorite', action: () => handleMenuAction('favorite'), icon: album.starred ? HeartCrack : Heart },
+        { label: 'Download', action: () => handleMenuAction('download'), icon: Download },
     ]}
     on:close={() => contextMenu.show = false}
 />

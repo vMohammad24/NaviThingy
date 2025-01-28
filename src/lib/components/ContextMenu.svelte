@@ -1,10 +1,12 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
+    import { fade } from 'svelte/transition';
     
     type MenuItem = {
         label?: string;
         action?: () => void;
         type?: 'separator';
+        icon?: any;
     };
 
     export let show = false;
@@ -66,39 +68,26 @@
     <div
         class="context-menu fixed z-50 min-w-[160px] rounded-lg shadow-lg py-1 bg-surface border border-primary max-w-fit"
         style="{menuStyle}"
+        in:fade={{delay: 0, duration: 200}}
     >
         {#each items as item}
             {#if item.type === 'separator'}
                 <div class="h-px my-1 bg-primary opacity-20"></div>
             {:else}
                 <button
-                    class="w-full px-4 py-2 text-left hover:opacity-80 transition-opacity text-text"
+                    class="w-full px-4 py-2 text-left hover:opacity-80 transition-opacity text-text flex items-center gap-2"
                     on:click={() => {
                         item.action?.();
                         show = false;
                         dispatch('close');
                     }}
                 >
+                    {#if item.icon}
+                        <svelte:component this={item.icon} size={18} />
+                    {/if}
                     {item.label}
                 </button>
             {/if}
         {/each}
     </div>
 {/if}
-
-<style>
-    .context-menu {
-        animation: fadeIn 0.2s ease-out;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-</style>

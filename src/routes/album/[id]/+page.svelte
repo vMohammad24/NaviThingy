@@ -1,13 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { download } from '$lib/client/util';
   import Album from '$lib/components/Album.svelte';
-  import ContextMenu from '$lib/components/ContextMenu.svelte';
+  import Song from '$lib/components/Song.svelte';
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
   import { selectedServer } from '$lib/stores/selectedServer';
-  import { Pause, Play } from 'lucide-svelte';
+  import { Play } from 'lucide-svelte';
   import type { AlbumWithSongsID3, Child } from 'subsonic-api';
   import { onMount } from "svelte";
   let loading = true;
@@ -49,72 +48,6 @@
   function isCurrentlyPlaying(song: Child) {
       return $player.currentTrack?.id === song.id && $player.isPlaying;
   }
-
-  function togglePlay(song: Child, index: number) {
-      if (isCurrentlyPlaying(song)) {
-          player.pause();
-      } else if ($player.currentTrack?.id === song.id) {
-          player.play();
-      } else {
-          playAlbum(index);
-      }
-  }
-
-  function handleContextMenu(event: MouseEvent, song: Child) {
-      event.preventDefault();
-      showContextMenu = true;
-      contextMenuX = event.clientX;
-      contextMenuY = event.clientY;
-      selectedSong = song;
-  }
-
-  function closeContextMenu() {
-      showContextMenu = false;
-      selectedSong = null;
-  }
-
-  function handlePlayNow() {
-      if (selectedSong && album.song) {
-          const index = selectedSong ? album.song.findIndex(s => s.id === selectedSong!.id) : -1;
-          if (index !== -1) {
-              playAlbum(index);
-          }
-      }
-      closeContextMenu();
-  }
-
-  function handlePlayNext() {
-      if (!selectedSong) return;
-      player.addToQueueNext(selectedSong);
-      closeContextMenu();
-  }
-
-  function handleAddToQueue() {
-      if (!selectedSong) return;
-      player.addToQueue(selectedSong);
-      closeContextMenu();
-  }
-
-  function handleGoToArtist() {
-      if (selectedSong?.artistId) {
-          goto(`/artist/${selectedSong.artistId}`);
-      }
-      closeContextMenu();
-  }
-
-  function handleGoToSong() {
-      if (selectedSong) {
-          goto(`/song/${selectedSong.id}`);
-      }
-      closeContextMenu();
-  }
-
-  function handleDownload() {
-      if (selectedSong) {
-          download($client!.download(selectedSong.id), `${selectedSong.artist} - ${selectedSong.title}`);
-      }
-      closeContextMenu();
-  }
 </script>
 
 <div class="container mx-auto p-4">
@@ -150,59 +83,10 @@
                 <h2 class="text-xl font-bold mb-4">Songs</h2>
                 <div class="divide-y divide-primary/20">
                     {#each album.song! as song, i}
-                        <!-- svelte-ignore a11y_click_events_have_key_events -->
-                        <!-- svelte-ignore a11y_no_static_element_interactions -->
-                        <div 
-                            class="p-3 rounded transition-colors flex items-center gap-4 border-none cursor-pointer relative"
-                            on:click={() => playAlbum(i)}
-                            on:mouseenter={() => hoveredIndex = i}
-                            on:mouseleave={() => hoveredIndex = -1}
-                            on:contextmenu={(e) => handleContextMenu(e, song)}
-                        >
-                            <div 
-                                class="absolute inset-0 bg-black transition-opacity duration-200"
-                                style:opacity={hoveredIndex === i ? "0.3" : "0"}
-                            ></div>
-                                {#if isCurrentlyPlaying(song) || $player.currentTrack?.id === song.id}
-                                    <button
-                                        class="hover:text-primary transition-colors w-6 h-6 flex items-center justify-start"
-                                        on:click|stopPropagation={() => togglePlay(song, i)}
-                                    >
-                                        {#if isCurrentlyPlaying(song)}
-                                            <Pause size={20} />
-                                        {:else}
-                                            <Play size={20} />
-                                        {/if}
-                                    </button>
-                                {:else}
-                                    <span class="w-6 text-right">{song.track}</span>
-                                {/if}
-                            {#if song.coverArt}
-                                <img src={song.coverArt} alt={song.title} class="w-12 h-12 rounded object-cover" />
-                            {/if}
-                            <span class="flex-grow relative z-10">{song.title}</span>
-                            <span class="text-text-secondary text-sm w-20 text-right relative z-10">{song.bitRate ?? 'unknown'} kbps</span>
-                            <span class="text-text-secondary w-16 text-right relative z-10">{formatDuration(song.duration!)}</span>
-                        </div>
+                        <Song {song} index={i} playlist={album.song!} />
                     {/each}
                 </div>
             </div>
         </div>
     {/if}
 </div>
-
-<ContextMenu
-    bind:show={showContextMenu}
-    x={contextMenuX}
-    y={contextMenuY}
-    items={[
-        { label: 'Play Now', action: handlePlayNow },
-        { label: 'Play Next', action: handlePlayNext },
-        { label: 'Add to Queue', action: handleAddToQueue },
-        { type: 'separator' },
-        { label: 'Go to Artist', action: handleGoToArtist },
-        { label: 'Go to Song', action: handleGoToSong },
-        { type: 'separator' },
-        { label: 'Download', action: handleDownload }
-      ]}
-/>

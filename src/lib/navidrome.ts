@@ -142,12 +142,12 @@ export class NavidromeClient {
             });
 
             if (albumList.album) {
-                albumList.album = await Promise.all(albumList.album.map(async album => {
+                albumList.album = albumList.album.map(album => {
                     if (album.coverArt) {
                         album.coverArt = this.getAlbumCoverUrl(album.id);
                     }
                     return album;
-                }));
+                });
             }
             return albumList;
         });
@@ -160,12 +160,12 @@ export class NavidromeClient {
         });
 
         if (albumList.album) {
-            albumList.album = await Promise.all(albumList.album.map(async album => {
+            albumList.album = albumList.album.map(album => {
                 if (album.coverArt) {
                     album.coverArt = this.getAlbumCoverUrl(album.id);
                 }
                 return album;
-            }));
+            });
         }
         return albumList;
     }
@@ -173,12 +173,12 @@ export class NavidromeClient {
     async getAlbumDetails(id: string) {
         const { album } = await this.api.getAlbum({ id });
         if (album.song) {
-            album.song = await Promise.all(album.song.map(async song => {
+            album.song = album.song.map(song => {
                 if (song.coverArt) {
                     song.coverArt = this.getAlbumCoverUrl(song.id);
                 }
                 return song;
-            }));
+            });
         }
         if (album.coverArt) {
             album.coverArt = this.getAlbumCoverUrl(album.id);
@@ -202,23 +202,22 @@ export class NavidromeClient {
         });
 
         if (searchResult3.album) {
-            searchResult3.album = await Promise.all(searchResult3.album.map(async album => {
+            searchResult3.album = searchResult3.album.map(album => {
                 if (album.coverArt) {
                     album.coverArt = this.getAlbumCoverUrl(album.id);
                 }
                 return album;
-            }));
+            });
         }
 
         if (searchResult3.song) {
-            searchResult3.song = await Promise.all(searchResult3.song.map(async song => {
+            searchResult3.song = searchResult3.song.map(song => {
                 if (song.coverArt) {
                     song.coverArt = this.getAlbumCoverUrl(song.id);
                 }
                 return song;
-            }));
+            });
         }
-
         return searchResult3;
     }
 
@@ -245,12 +244,12 @@ export class NavidromeClient {
         const { artist } = await this.api.getArtist({ id });
         const { artistInfo } = await this.api.getArtistInfo({ id });
         if (artist.album) {
-            artist.album = await Promise.all(artist.album.map(async album => {
+            artist.album = artist.album.map(album => {
                 if (album.coverArt) {
                     album.coverArt = this.getAlbumCoverUrl(album.id);
                 }
                 return album;
-            }));
+            });
         }
 
         return { artist, artistInfo };
@@ -263,12 +262,12 @@ export class NavidromeClient {
             song.coverArt = this.getAlbumCoverUrl(song.id);
         }
         if (similarSongs.song) {
-            similarSongs.song = await Promise.all(similarSongs.song.map(async song => {
+            similarSongs.song = similarSongs.song.map(song => {
                 if (song.coverArt) {
                     song.coverArt = this.getAlbumCoverUrl(song.id);
                 }
                 return song;
-            }));
+            });
         }
         return { song, similarSongs };
     }
@@ -279,12 +278,12 @@ export class NavidromeClient {
         });
 
         if (randomSongs.song) {
-            randomSongs.song = await Promise.all(randomSongs.song.map(async song => {
+            randomSongs.song = randomSongs.song.map(song => {
                 if (song.coverArt) {
                     song.coverArt = this.getAlbumCoverUrl(song.id);
                 }
                 return song;
-            }));
+            });
         }
 
         return randomSongs;
@@ -297,12 +296,12 @@ export class NavidromeClient {
         });
 
         if (albumList.album) {
-            albumList.album = await Promise.all(albumList.album.map(async album => {
+            albumList.album = albumList.album.map(album => {
                 if (album.coverArt) {
                     album.coverArt = this.getAlbumCoverUrl(album.id);
                 }
                 return album;
-            }));
+            });
         }
 
         return albumList;
@@ -315,15 +314,59 @@ export class NavidromeClient {
         });
 
         if (albumList.album) {
-            albumList.album = await Promise.all(albumList.album.map(async album => {
+            albumList.album = albumList.album.map(album => {
                 if (album.coverArt) {
                     album.coverArt = this.getAlbumCoverUrl(album.id);
                 }
                 return album;
-            }));
+            });
         }
 
         return albumList;
+    }
+
+    async getStarred() {
+        const { starred } = await this.api.getStarred();
+        if (starred.album) {
+            starred.album = starred.album.map(album => {
+                if (album.coverArt) {
+                    album.coverArt = this.getAlbumCoverUrl(album.id);
+                }
+                return album;
+            });
+        }
+
+        if (starred.song) {
+            starred.song = starred.song.map(song => {
+                if (song.coverArt) {
+                    song.coverArt = this.getAlbumCoverUrl(song.id);
+                }
+                return song;
+            });
+        }
+        return starred;
+    }
+
+    async star(id: string, type: 'track' | 'album' | 'artist') {
+        switch (type) {
+            case 'track':
+                return await this.api.star({ id });
+            case 'album':
+                return await this.api.star({ albumId: id });
+            case 'artist':
+                return await this.api.star({ artistId: id });
+        }
+    }
+
+    async unstar(id: string, type: 'track' | 'album' | 'artist') {
+        switch (type) {
+            case 'track':
+                return await this.api.custom('unstar', { id });
+            case 'album':
+                return await this.api.custom('unstar', { albumId: id });
+            case 'artist':
+                return await this.api.custom('unstar', { artistId: id });
+        }
     }
 
     private async getLyricsFromLRCLIB(song: Child): Promise<LyricsResult | undefined> {
