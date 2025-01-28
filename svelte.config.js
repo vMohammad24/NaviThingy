@@ -21,7 +21,7 @@ const config = {
         "/artists",
         "/songs",
         "/playlists",
-        "/playlist/123",
+        "/playlists/123",
         "/genres",
       ],
     },
