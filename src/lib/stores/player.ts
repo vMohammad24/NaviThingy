@@ -12,6 +12,7 @@ interface PlayerState {
     isPlaying: boolean;
     shuffle: boolean;
     repeat: RepeatMode;
+    scrobble: boolean;
 }
 
 function createPlayerStore() {
@@ -31,7 +32,8 @@ function createPlayerStore() {
         playlist: [],
         isPlaying: false,
         shuffle: false,
-        repeat: 'none'
+        repeat: 'none',
+        scrobble: localStorage.getItem('scrobble') === 'true'
     });
 
     function shuffleArray(array: Child[]): Child[] {
@@ -175,6 +177,19 @@ function createPlayerStore() {
             });
         },
 
+        toggleScrobble: () => {
+            update(state => {
+                const newScrobble = !state.scrobble;
+                localStorage.setItem('scrobble', newScrobble.toString());
+                return { ...state, scrobble: newScrobble };
+            });
+        },
+        setScrobble: (value: boolean) => {
+            update(state => {
+                localStorage.setItem('scrobble', value.toString());
+                return { ...state, scrobble: value };
+            });
+        },
         stop: () => {
             update(state => ({ ...state, isPlaying: false }));
         }

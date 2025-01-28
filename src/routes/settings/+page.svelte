@@ -2,6 +2,7 @@
   import { download } from '$lib/client/util';
   import ContextMenu from '$lib/components/ContextMenu.svelte';
   import Modal from '$lib/components/Modal.svelte';
+  import { player } from '$lib/stores/player';
   import { selectedServer } from '$lib/stores/selectedServer';
   import { servers } from '$lib/stores/servers';
   import { theme } from '$lib/stores/theme';
@@ -133,6 +134,24 @@
 
 <div class="max-w-2xl mx-auto">
     <h1 class="text-3xl font-bold mb-8">Settings</h1>
+
+    <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
+        <h2 class="text-xl font-semibold mb-4">Global Settings</h2>
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-medium">Scrobbling</h3>
+                    <p class="text-sm text-text-secondary">Track your listening history on last.fm (requires linking in navidrome)</p>
+                </div>
+                <button
+                    class="px-3 py-1 rounded-lg text-sm font-medium transition-all {$player.scrobble ? 'bg-primary text-background' : 'bg-surface'}"
+                    on:click={() => player.toggleScrobble()}
+                >
+                    {$player.scrobble ? 'Enabled' : 'Disabled'}
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
         <h2 class="text-xl font-semibold mb-4">Server Settings</h2>

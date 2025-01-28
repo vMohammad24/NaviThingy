@@ -115,8 +115,7 @@
 
    function playStream(id: string) {
     if (!$client) return;
-    $client.scrobble(id);
-    const track = $player.currentTrack!;
+    if($player.scrobble) $client.scrobble(id);
     const stream = $client.getSongStreamURL(id);
     if (!audio) audio = new Audio();
     audio.src = stream;
