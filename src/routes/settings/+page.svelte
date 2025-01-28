@@ -82,6 +82,7 @@
             const themeData = await response.json();
             theme.addTheme({ ...themeData, id: 'custom_' + Date.now() });
             importUrl = '';
+            window.location.reload();
         } catch (error) {
             console.error('Failed to import theme:', error);
         }
@@ -96,6 +97,7 @@
             try {
                 const themeData = JSON.parse(e.target?.result as string);
                 theme.addTheme({ ...themeData, id: 'custom_' + Date.now() });
+                window.location.reload();
             } catch (error) {
                 console.error('Failed to parse theme file:', error);
             }
