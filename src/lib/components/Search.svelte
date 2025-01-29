@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { client } from '$lib/stores/client';
-    import type { SearchResult3 } from 'subsonic-api';
+    import type { SearchResult3 } from '@vmohammad/subsonic-api';
     import { createEventDispatcher } from 'svelte';
     import Modal from './Modal.svelte';
 

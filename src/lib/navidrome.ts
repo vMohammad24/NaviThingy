@@ -1,4 +1,4 @@
-import { SubsonicAPI, type AlbumList, type Child } from 'subsonic-api';
+import { SubsonicAPI, type AlbumList, type Child } from '@vmohammad/subsonic-api';
 import type { LRCLIBResponse, LyricsResult, NavidromeServer, SyncedLyric } from './types/navidrome';
 
 export class NavidromeClient {
@@ -6,8 +6,6 @@ export class NavidromeClient {
     private auth: {
         username: string;
         password: string;
-        token?: string;
-        subsonicSalt?: string;
     }
     constructor(server: NavidromeServer) {
         console.log('Creating client')
@@ -17,49 +15,10 @@ export class NavidromeClient {
         }
         this.api = new SubsonicAPI({
             url: server.url,
-            auth: this.auth
+            auth: this.auth,
+            client: 'NaviThingy'
         });
-        this.api.navidromeSession().then(s => {
-            this.auth.token = s.subsonicToken;
-            this.auth.subsonicSalt = s.subsonicSalt;
-        })
     }
-
-    private getURL(method: string, params: Record<string, unknown>) {
-        let base = this.api.baseURL();
-        const session = this.auth;
-        if (!base.endsWith("rest/")) base += "rest/";
-
-        if (!method.endsWith(".m3u8")) base += `${method}.view`;
-
-        const url = new URL(base);
-        url.searchParams.set("v", "1.16.1");
-        url.searchParams.set("c", "NaviThingy");
-        url.searchParams.set("f", "json");
-
-        for (const [key, value] of Object.entries(params)) {
-            if (typeof value === "undefined" || value === null) continue;
-            if (Array.isArray(value)) {
-                for (const v of value) {
-                    url.searchParams.append(key, v.toString());
-                }
-            } else {
-                url.searchParams.set(key, value.toString());
-            }
-        }
-
-        if (session.username) {
-            url.searchParams.set("u", session.username);
-            const { token, subsonicSalt } = session;
-            url.searchParams.set("t", token!);
-            url.searchParams.set("s", subsonicSalt!);
-        } else {
-            throw new Error("no auth found");
-        }
-
-        return url.toString();
-    }
-
     async getGenres(): Promise<{
         value: string;
         albumCount: number;
@@ -82,12 +41,7 @@ export class NavidromeClient {
     async getPlaylist(id: string) {
         const playlist = (await this.api.getPlaylist({ id })).playlist;
         if (playlist.entry) {
-            playlist.entry = playlist.entry.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            playlist.entry = await this.sanitizeChildren(playlist.entry);
         }
         return playlist;
     }
@@ -129,12 +83,7 @@ export class NavidromeClient {
         const { albumList } = await this.api.getAlbumList({ type, ...params });
 
         if (albumList.album) {
-            albumList.album = albumList.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
+            albumList.album = await this.sanitizeChildren(albumList.album);
         }
         return albumList;
     }
@@ -142,21 +91,16 @@ export class NavidromeClient {
     async getAlbumDetails(id: string) {
         const { album } = await this.api.getAlbum({ id });
         if (album.song) {
-            album.song = album.song.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            album.song = await this.sanitizeChildren(album.song);
         }
         if (album.coverArt) {
-            album.coverArt = this.getAlbumCoverUrl(album.id);
+            album.coverArt = await this.getCoverURL(album.id);
         }
         return album;
     }
 
-    getAlbumCoverUrl(id: string, size = 1024) {
-        return this.getURL("getCoverArt", { id, size });
+    async getCoverURL(id: string, size = 1024) {
+        return (await this.api.getURL("getCoverArt", { id, size })).toString();
     }
 
     async search(query: string, type?: 'song' | 'album' | 'artist', offset: number = 0) {
@@ -171,21 +115,11 @@ export class NavidromeClient {
         });
 
         if (searchResult3.album) {
-            searchResult3.album = searchResult3.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
+            searchResult3.album = await this.sanitizeChildren(searchResult3.album);
         }
 
         if (searchResult3.song) {
-            searchResult3.song = searchResult3.song.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            searchResult3.song = await this.sanitizeChildren(searchResult3.song);
         }
         return searchResult3;
     }
@@ -197,28 +131,51 @@ export class NavidromeClient {
         })
     }
 
-    getSongStreamURL(id: string) {
-        return this.getURL("stream", { id, format: 'raw' });
+    async getSongStreamURL(id: string) {
+        return (await this.api.getURL("stream", { id, format: 'raw' })).toString();
     }
 
-    download(id: string) {
-        return this.getURL('download', { id, format: 'raw' });
+    async download(id: string) {
+        return (await this.api.getURL('download', { id, format: 'raw' })).toString();
     }
 
-    async scrobble(id: string) {
-        return await this.api.scrobble({ id, submission: false, time: Math.floor(Date.now() / 1000) });
+    async scrobble(id: string, submission: boolean = false) {
+        return await this.api.scrobble({ id, submission });
+    }
+
+    async getQueue() {
+        const queue = (await this.api.getPlayQueue()).playQueue;
+        if (queue?.entry) {
+            queue.entry = await this.sanitizeChildren(queue.entry);
+        }
+        return queue;
+    }
+
+    private async sanitizeChildren<T extends { coverArt?: string; id: string }>(children: T[]): Promise<T[]> {
+        return await Promise.all(children.map(async child => {
+            if (child.coverArt && !child.coverArt.startsWith('http')) {
+                return {
+                    ...child,
+                    coverArt: await this.getCoverURL(child.id)
+                };
+            }
+            return child;
+        }));
+    }
+
+    async saveQueue(params: {
+        position: number;
+        current?: string;
+        id?: string;
+    }) {
+        return await this.api.savePlayQueue(params);
     }
 
     async getArtist(id: string) {
         const { artist } = await this.api.getArtist({ id });
         const { artistInfo } = await this.api.getArtistInfo({ id });
         if (artist.album) {
-            artist.album = artist.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
+            artist.album = await this.sanitizeChildren(artist.album);
         }
 
         return { artist, artistInfo };
@@ -232,15 +189,10 @@ export class NavidromeClient {
         const { song } = await this.api.getSong({ id });
         const { similarSongs } = await this.api.getSimilarSongs({ id });
         if (song.coverArt) {
-            song.coverArt = this.getAlbumCoverUrl(song.id);
+            song.coverArt = (await this.getCoverURL(song.id)).toString();
         }
         if (similarSongs.song) {
-            similarSongs.song = similarSongs.song.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            similarSongs.song = await this.sanitizeChildren(similarSongs.song);
         }
         return { song, similarSongs };
     }
@@ -251,12 +203,7 @@ export class NavidromeClient {
         });
 
         if (randomSongs.song) {
-            randomSongs.song = randomSongs.song.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            randomSongs.song = await this.sanitizeChildren(randomSongs.song);
         }
 
         return randomSongs;
@@ -265,21 +212,11 @@ export class NavidromeClient {
     async getStarred() {
         const { starred } = await this.api.getStarred();
         if (starred.album) {
-            starred.album = starred.album.map(album => {
-                if (album.coverArt) {
-                    album.coverArt = this.getAlbumCoverUrl(album.id);
-                }
-                return album;
-            });
+            starred.album = await this.sanitizeChildren(starred.album);
         }
 
         if (starred.song) {
-            starred.song = starred.song.map(song => {
-                if (song.coverArt) {
-                    song.coverArt = this.getAlbumCoverUrl(song.id);
-                }
-                return song;
-            });
+            starred.song = await this.sanitizeChildren(starred.song);
         }
         return starred;
     }
@@ -318,7 +255,13 @@ export class NavidromeClient {
 
             const response = await fetch(`https://lrclib.net/api/get?${params}`);
 
-            if (!response.ok) return undefined;
+            if (!response.ok) {
+                if (song.artist?.includes(',')) {
+                    const artist = song.artist.split(',')[0];
+                    return await this.getLyricsFromLRCLIB({ ...song, artist });
+                }
+                return undefined;
+            };
 
             const data: LRCLIBResponse = await response.json();
 
@@ -345,7 +288,7 @@ export class NavidromeClient {
     async getLyrics(song: Child): Promise<LyricsResult | undefined> {
         try {
             const { lyrics } = await this.api.getLyrics({ artist: song.artist, title: song.title });
-            if (lyrics?.value) {
+            if (lyrics?.value && lyrics.value.length > 1) {
                 const syncedLyrics = this.parseSyncedLyrics(lyrics.value);
                 if (syncedLyrics.length == 0) {
                     return await this.getLyricsFromLRCLIB(song);

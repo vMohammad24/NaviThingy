@@ -1,6 +1,6 @@
 <script lang="ts">
     import { client } from '$lib/stores/client';
-    import type { ArtistID3, IndexID3 } from 'subsonic-api';
+    import type { ArtistID3, IndexID3 } from '@vmohammad/subsonic-api';
     import { onMount } from 'svelte';
 
     interface ArtistViewSettings {

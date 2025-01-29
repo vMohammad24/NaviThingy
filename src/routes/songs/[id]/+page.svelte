@@ -3,8 +3,8 @@
   import Song from '$lib/components/Song.svelte';
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
+  import type { Child, SimilarSongs } from '@vmohammad/subsonic-api';
   import { Play } from 'lucide-svelte';
-  import type { Child, SimilarSongs } from 'subsonic-api';
   import { onMount } from "svelte";
 
   let loading = true;

@@ -113,14 +113,20 @@
     updateMediaPlaybackState(false);
   }
 
-   function playStream(id: string) {
+   async function playStream(id: string) {
     if (!$client) return;
+    $client.scrobble(id, true);
     if($player.scrobble) $client.scrobble(id);
-    const stream = $client.getSongStreamURL(id);
+    const stream = await $client.getSongStreamURL(id);
     if (!audio) audio = new Audio();
     audio.src = stream;
     audio.volume = volume;
     audio.play();
+    $client.saveQueue({
+      current: id,
+      position: audio.currentTime,
+      id: $player.playlist.map(track => track.id).toString()
+    })
   }
 
   
@@ -277,6 +283,18 @@
       }
     });
 
+    (async () => {
+      if(!$client) return;
+      const queue = await $client.getQueue();
+      if(!queue) return;
+      if(queue.entry) {
+        player.setPlaylist(queue.entry, queue.entry.findIndex(t => t.id === queue.current) ?? 0, false);
+        if(queue.position) {
+          audio.currentTime = queue.position;
+        }
+      }
+    })()
+
     return () => {
       if (audio) {
         audio.pause();
@@ -377,13 +395,13 @@
           </div>
 
           <div class="flex-1 flex gap-4 min-h-0">
-            {#if lyrics}
-              <div class="flex-1 bg-surface/50 rounded-lg overflow-hidden flex flex-col">
-                <h3 class="text-lg font-semibold p-4 border-b border-primary/20">Lyrics</h3>
-                <div 
-                  class="flex-1 overflow-y-auto p-4 lyrics-container"
-                  bind:this={lyricsContainer}
-                >
+            <div class="flex-1 bg-surface/50 rounded-lg overflow-hidden flex flex-col">
+              <h3 class="text-lg font-semibold p-4 border-b border-primary/20">Lyrics</h3>
+              <div 
+                class="flex-1 overflow-y-auto p-4 lyrics-container"
+                bind:this={lyricsContainer}
+              >
+                {#if lyrics}
                   {#if lyrics.synced}
                     <div class="flex flex-col gap-4">
                       {#each lyrics.lines as line, i}
@@ -413,9 +431,14 @@
                   {:else}
                     <p class="text-xl whitespace-pre-wrap p-4">{lyrics.plain}</p>
                   {/if}
-                </div>
+                {:else}
+                  <div class="h-full flex flex-col items-center justify-center text-text-secondary">
+                    <p class="text-xl mb-2">No lyrics available</p>
+                    <p class="text-sm opacity-75">Try searching online for "{$player.currentTrack.title} by {$player.currentTrack.artist}" lyrics</p>
+                  </div>
+                {/if}
               </div>
-            {/if}
+            </div>
 
             <div class="w-96 bg-surface/50 rounded-lg overflow-hidden flex flex-col">
               <Queue minimal={true} />

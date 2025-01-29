@@ -1,5 +1,5 @@
 import { NavidromeClient } from '$lib/navidrome';
-import type { Child } from 'subsonic-api';
+import type { Child } from '@vmohammad/subsonic-api';
 import { writable } from 'svelte/store';
 import { client as cl } from './client';
 export type RepeatMode = 'none' | 'one' | 'all';

@@ -3,8 +3,8 @@
     import { download } from '$lib/client/util';
     import { client } from '$lib/stores/client';
     import { player } from '$lib/stores/player';
+    import type { Child } from '@vmohammad/subsonic-api';
     import { AlbumIcon, ArrowUpWideNarrow, Download, Forward, Heart, HeartCrack, Music, Pause, Play, User } from 'lucide-svelte';
-    import type { Child } from 'subsonic-api';
     import ContextMenu from './ContextMenu.svelte';
 
     let { song, index, playlist, showTrackNumber = true, extraOptions = [] } = $props<{
@@ -82,7 +82,7 @@
                 if (song.albumId) goto(`/albums/${song.albumId}`);
                 break;
             case 'download':
-                download($client!.download(song.id), `${song.artist} - ${song.title}`);
+                (async () => download(await $client!.download(song.id), `${song.artist} - ${song.title}`))();
                 break;
             case 'favorite':
                 if(song.starred) {

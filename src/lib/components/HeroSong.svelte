@@ -1,7 +1,7 @@
 <script lang="ts">
     import { player } from "$lib/stores/player";
+    import type { Child } from '@vmohammad/subsonic-api';
     import { Pause, Play, SkipForward } from 'lucide-svelte';
-    import type { Child } from "subsonic-api";
     import { fly } from 'svelte/transition';
 
     export let song: Child;

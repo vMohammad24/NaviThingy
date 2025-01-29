@@ -6,8 +6,8 @@
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
   import { selectedServer } from '$lib/stores/selectedServer';
+  import type { AlbumWithSongsID3, Child } from '@vmohammad/subsonic-api';
   import { Play } from 'lucide-svelte';
-  import type { AlbumWithSongsID3, Child } from 'subsonic-api';
   import { onMount } from "svelte";
   let loading = true;
   let error: string | null = null;

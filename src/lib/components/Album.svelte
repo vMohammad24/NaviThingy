@@ -2,8 +2,8 @@
   import { download } from '$lib/client/util';
   import { client } from '$lib/stores/client';
   import { player } from "$lib/stores/player";
+  import type { Child } from '@vmohammad/subsonic-api';
   import { ArrowUpWideNarrow, Download, Heart, HeartCrack, Pause, Play } from 'lucide-svelte';
-  import type { Child } from "subsonic-api";
   import ContextMenu from './ContextMenu.svelte';
 
   export let album: Child;  
@@ -46,7 +46,7 @@
             break;
             
         case 'download':
-            const response = $client.download(album.id);
+            const response = await $client.download(album.id);
             download(response, `${album.artist} - ${album.album}.zip`);
             break;
         case 'queue':

@@ -2,7 +2,7 @@
     import Album from '$lib/components/Album.svelte';
     import HeroSong from '$lib/components/HeroSong.svelte';
     import { client } from '$lib/stores/client';
-    import type { Child } from 'subsonic-api';
+    import type { Child } from '@vmohammad/subsonic-api';
     import { onMount } from 'svelte';
     import { quintOut } from 'svelte/easing';
     import { fade, fly } from 'svelte/transition';

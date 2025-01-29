@@ -2,7 +2,7 @@
     import { page } from '$app/state';
     import Album from '$lib/components/Album.svelte';
     import { client } from '$lib/stores/client';
-    import type { ArtistInfo, ArtistWithAlbumsID3 } from 'subsonic-api';
+    import type { ArtistInfo, ArtistWithAlbumsID3 } from '@vmohammad/subsonic-api';
     import { onMount } from "svelte";
 
     let loading = true;

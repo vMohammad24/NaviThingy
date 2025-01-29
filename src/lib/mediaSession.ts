@@ -1,5 +1,5 @@
 
-import type { Child } from 'subsonic-api';
+import type { Child } from '@vmohammad/subsonic-api';
 import { player } from './stores/player';
 
 export function setupMediaSession() {

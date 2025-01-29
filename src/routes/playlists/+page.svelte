@@ -2,8 +2,8 @@
     import { goto } from '$app/navigation';
     import { formatDate } from '$lib/client/util';
     import { client } from '$lib/stores/client';
+    import type { Playlist } from '@vmohammad/subsonic-api';
     import { ListMusic, Lock, Unlock } from 'lucide-svelte';
-    import type { Playlist } from 'subsonic-api';
     import { onMount } from 'svelte';
 
     let playlists: Playlist[] = [];
@@ -101,7 +101,7 @@
                     <div class="aspect-square bg-background/50">
                         {#if playlist.songCount && playlist.songCount > 0}
                             <img 
-                                src={`${$client?.getAlbumCoverUrl(playlist.id)}`} 
+                                src={`${$client?.getCoverURL(playlist.id)}`} 
                                 alt={playlist.name}
                                 class="w-full h-full object-cover"
                             />

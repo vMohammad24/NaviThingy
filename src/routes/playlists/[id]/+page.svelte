@@ -4,8 +4,8 @@
     import Song from '$lib/components/Song.svelte';
     import { client } from '$lib/stores/client';
     import { player } from '$lib/stores/player';
+    import type { PlaylistWithSongs } from '@vmohammad/subsonic-api';
     import { Clock, Edit, ListMusic, Lock, Trash2, Unlock, User } from 'lucide-svelte';
-    import type { PlaylistWithSongs } from 'subsonic-api';
     import { onMount } from 'svelte';
 
     const playlistId = page.params.id;

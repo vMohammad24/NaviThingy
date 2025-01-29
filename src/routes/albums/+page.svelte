@@ -2,8 +2,8 @@
   import { page } from '$app/state';
   import Album from '$lib/components/Album.svelte';
   import { client } from '$lib/stores/client';
+  import type { Child } from '@vmohammad/subsonic-api';
   import { Disc } from 'lucide-svelte';
-  import type { Child } from 'subsonic-api';
   import { onMount } from 'svelte';
 
     interface AlbumViewSettings {

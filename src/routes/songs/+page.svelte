@@ -1,8 +1,8 @@
 <script lang="ts">
     import Song from '$lib/components/Song.svelte';
     import { client } from '$lib/stores/client';
+    import type { Child } from '@vmohammad/subsonic-api';
     import { Heart } from 'lucide-svelte';
-    import type { Child } from 'subsonic-api';
 
     let songs: Child[] = $state([]);
     let loading = $state(true);
