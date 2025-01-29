@@ -30,6 +30,9 @@
       },
     },
   },
+  "trustedDependencies": [
+    "@vmohammad/subsonic-api",
+  ],
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
@@ -191,7 +194,7 @@
 
     "@types/uuid": ["@types/uuid@10.0.0", "", {}, "sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ=="],
 
-    "@vmohammad/subsonic-api": ["@vmohammad/subsonic-api@github:vMohammad24/subsonic-api#9598d7e", {}, "vMohammad24-subsonic-api-9598d7e"],
+    "@vmohammad/subsonic-api": ["@vmohammad/subsonic-api@github:vMohammad24/subsonic-api#09cbd88", {}, "vMohammad24-subsonic-api-09cbd88"],
 
     "acorn": ["acorn@8.14.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA=="],
 
