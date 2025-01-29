@@ -18,7 +18,7 @@
     "@tauri-apps/plugin-process": "^2.2.0",
     "@tauri-apps/plugin-updater": "~2",
     "lucide-svelte": "latest",
-    "@vmohammad/subsonic-api": "git+https://github.com/vMohammad24/subsonic-api",
+    "@vmohammad/subsonic-api": "3.1.2",
     "uuid": "latest"
   },
   "devDependencies": {
