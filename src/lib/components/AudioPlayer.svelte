@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { setupMediaSession, updateMediaMetadata, updateMediaPlaybackState } from '$lib/mediaSession';
+  import { setupMediaSession } from '$lib/mediaSession';
   import { client } from '$lib/stores/client';
   import { player } from '$lib/stores/player';
   import { queueActions } from '$lib/stores/queueStore';
@@ -15,10 +15,9 @@
   import { fade } from 'svelte/transition';
   import Queue from './Queue.svelte';
   
-  let audio: HTMLAudioElement;
   let progress = 0;
   let duration = 0;
-  let volume = Number(localStorage.getItem('volume') ?? '1');
+  let volume = player.getVolume();
   let previousVolume = volume;
   let showVolume = false;
   let volumeTimeout: ReturnType<typeof setTimeout> | undefined;  
@@ -99,42 +98,13 @@
     
     if (currentTrackId !== $player.currentTrack.id) {
       currentTrackId = $player.currentTrack.id;
-      playStream($player.currentTrack.id);
       scrollToCurrentLyric();
-      updateMediaMetadata($player.currentTrack);
-    } else if (audio && audio.paused) {
-      audio.play();
     }
-    updateMediaPlaybackState(true);
   }
-
-  $: if (!$player.isPlaying && audio) {
-    audio.pause();
-    updateMediaPlaybackState(false);
-  }
-
-   async function playStream(id: string) {
-    if (!$client) return;
-    $client.scrobble(id, true);
-    if($player.scrobble) $client.scrobble(id);
-    const stream = await $client.getSongStreamURL(id);
-    if (!audio) audio = new Audio();
-    audio.src = stream;
-    audio.volume = volume;
-    audio.play();
-    $client.saveQueue({
-      current: id,
-      position: audio.currentTime,
-      id: $player.playlist.map(track => track.id).toString()
-    })
-  }
-
-  
 
   function updateVolume(value: number) {
     volume = Math.max(0, Math.min(1, value));
-    if (audio) audio.volume = volume;
-    localStorage.setItem('volume', volume.toString());
+    player.setVolume(volume);
   }
 
   function toggleMute() {
@@ -193,8 +163,8 @@
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
-    if (audio && duration) {
-      audio.currentTime = percentage * duration;
+    if (duration) {
+     player.seek(percentage * duration);
     }
   }
 
@@ -241,8 +211,8 @@
   }
 
   function seekToLyric(time: number) {
-    if (audio) {
-      audio.currentTime = time;
+    if ($player) {
+      player.seek(time);
     }
   }
 
@@ -268,38 +238,15 @@
 
   onMount(() => {
     setupMediaSession();
-    audio = new Audio();
-    audio.addEventListener('timeupdate', () => {
-      progress = audio.currentTime;
-      duration = audio.duration;
-      updateCurrentLyric();
-    });
     
-    audio.addEventListener('ended', () => {
-      if ($player.repeat === 'one') {
-        audio.play();
-      } else {
-        player.next();
-      }
-    });
-
-    (async () => {
-      if(!$client) return;
-      const queue = await $client.getQueue();
-      if(!queue) return;
-      if(queue.entry) {
-        player.setPlaylist(queue.entry, queue.entry.findIndex(t => t.id === queue.current) ?? 0, false);
-        if(queue.position) {
-          audio.currentTime = queue.position;
-        }
-      }
-    })()
+    const interval = setInterval(() => {
+      progress = player.getProgress();
+      duration = player.getDuration();
+      updateCurrentLyric();
+    }, 100);
 
     return () => {
-      if (audio) {
-        audio.pause();
-        audio.src = '';
-      }
+      clearInterval(interval);
       if (volumeTimeout) clearTimeout(volumeTimeout);  
     };
   });
@@ -398,7 +345,7 @@
             <div class="flex-1 bg-surface/50 rounded-lg overflow-hidden flex flex-col">
               <h3 class="text-lg font-semibold p-4 border-b border-primary/20">Lyrics</h3>
               <div 
-                class="flex-1 overflow-y-auto p-4 lyrics-container"
+                class="flex-1 overflow-y-auto p-4 scrollbar-none"
                 bind:this={lyricsContainer}
               >
                 {#if lyrics}
@@ -622,25 +569,4 @@
 {/if}
 
 <style>
-
-  .lyrics-container {
-    scrollbar-width: none;  /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
-  }
-  
-  .lyrics-container::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
-  }
-
-  @media (orientation: portrait) {
-    .lyrics-container {
-      max-height: 40vh;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .lyrics-container {
-      max-height: none;
-    }
-  }
 </style>

@@ -14,6 +14,29 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    ({ addUtilities }) => addUtilities({
+      '.scrollbar-none': {
+        /* IE and Edge */
+        '-ms-overflow-style': 'none',
+        /* Firefox */
+        'scrollbar-width': 'none',
+        /* Safari and Chrome */
+        '&::-webkit-scrollbar': {
+          display: 'none'
+        }
+      },
+      '.scrollbar-default': {
+        /* IE and Edge */
+        '-ms-overflow-style': 'auto',
+        /* Firefox */
+        'scrollbar-width': 'auto',
+        /* Safari and Chrome */
+        '&::-webkit-scrollbar': {
+          display: 'block'
+        }
+      }
+    })
+  ],
 } satisfies Config
 

@@ -1,8 +1,64 @@
+import { updateMediaMetadata, updateMediaPlaybackState } from '$lib/mediaSession';
 import { NavidromeClient } from '$lib/navidrome';
 import type { Child } from '@vmohammad/subsonic-api';
 import { writable } from 'svelte/store';
 import { client as cl } from './client';
+
 export type RepeatMode = 'none' | 'one' | 'all';
+
+class AudioPlayer {
+    private audio: HTMLAudioElement;
+    private client: NavidromeClient | null = null;
+    public volume: number;
+    public progress = 0;
+    public duration = 0;
+
+    constructor() {
+        this.audio = new Audio();
+        this.volume = Number(localStorage.getItem('volume') ?? '1');
+        this.audio.volume = this.volume;
+
+        this.audio.addEventListener('timeupdate', () => {
+            this.progress = this.audio.currentTime;
+            this.duration = this.audio.duration;
+        });
+    }
+
+    async playStream(track: Child) {
+        if (!this.client) return;
+        this.client.scrobble(track.id, true);
+        const stream = await this.client.getSongStreamURL(track.id);
+        this.audio.src = stream;
+        this.audio.volume = this.volume;
+        return this.audio.play();
+    }
+
+    setClient(client: NavidromeClient | null) {
+        this.client = client;
+    }
+
+    pause() {
+        this.audio.pause();
+    }
+
+    resume() {
+        return this.audio.play();
+    }
+
+    seek(time: number) {
+        this.audio.currentTime = time;
+    }
+
+    setVolume(value: number) {
+        this.volume = Math.max(0, Math.min(1, value));
+        this.audio.volume = this.volume;
+        localStorage.setItem('volume', this.volume.toString());
+    }
+
+    onEnded(callback: () => void) {
+        this.audio.addEventListener('ended', callback);
+    }
+}
 
 interface PlayerState {
     currentTrack: Child | null;
@@ -16,13 +72,12 @@ interface PlayerState {
 }
 
 function createPlayerStore() {
+    const audioPlayer = new AudioPlayer();
     let client: NavidromeClient | null = null;
+
     cl.subscribe(cl => {
-        if (cl) {
-            client = cl;
-        } else {
-            client = null;
-        }
+        audioPlayer.setClient(cl);
+        client = cl;
     });
 
     const { subscribe, update, set } = writable<PlayerState>({
@@ -64,6 +119,10 @@ function createPlayerStore() {
                     currentTrack: tracks[startIndex],
                     isPlaying: autoplay
                 };
+                if (autoplay && newState.currentTrack) {
+                    audioPlayer.playStream(newState.currentTrack);
+                    updateMediaMetadata(newState.currentTrack);
+                }
                 return newState;
             });
         },
@@ -127,7 +186,16 @@ function createPlayerStore() {
                 };
             });
         },
-        togglePlay: () => update(state => ({ ...state, isPlaying: !state.isPlaying })),
+        togglePlay: () => update(state => {
+            const newState = { ...state, isPlaying: !state.isPlaying };
+            if (newState.isPlaying) {
+                audioPlayer.resume();
+            } else {
+                audioPlayer.pause();
+            }
+            updateMediaPlaybackState(newState.isPlaying);
+            return newState;
+        }),
         play: () => update(state => ({ ...state, isPlaying: true })),
         pause: () => update(state => ({ ...state, isPlaying: false })),
         playAlbum: async (album: Child, shuffle = false) => {
@@ -192,7 +260,18 @@ function createPlayerStore() {
         },
         stop: () => {
             update(state => ({ ...state, isPlaying: false }));
-        }
+        },
+        seek: (time: number) => {
+            audioPlayer.seek(time);
+        },
+
+        setVolume: (volume: number) => {
+            audioPlayer.setVolume(volume);
+        },
+
+        getVolume: () => audioPlayer.volume,
+        getProgress: () => audioPlayer.progress,
+        getDuration: () => audioPlayer.duration,
     };
 }
 
