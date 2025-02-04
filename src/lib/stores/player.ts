@@ -266,15 +266,23 @@ function createPlayerStore() {
 
             const shuffledSongs = shuffle ? shuffleArray([...songs]) : songs;
 
-            update(state => ({
-                ...state,
-                originalPlaylist: songs,
-                playlist: shuffledSongs,
-                currentIndex: 0,
-                currentTrack: shuffledSongs[0],
-                isPlaying: true,
-                shuffle
-            }));
+            update(state => {
+                const newState = {
+                    ...state,
+                    originalPlaylist: songs,
+                    playlist: shuffledSongs,
+                    currentIndex: 0,
+                    currentTrack: shuffledSongs[0],
+                    isPlaying: true,
+                    shuffle
+                };
+
+                audioPlayer.reset();
+                audioPlayer.playStream(shuffledSongs[0]);
+                updateMediaMetadata(shuffledSongs[0]);
+
+                return newState;
+            });
         },
         addToQueue: (track: Child | Child[]) => {
             update(state => {
