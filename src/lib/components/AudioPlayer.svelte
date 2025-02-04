@@ -30,6 +30,9 @@
   let currentLyricIndex = -1;
   let lyricsContainer: HTMLDivElement;
   let currentLyricElement: HTMLParagraphElement | null = null;
+  let progressInterval: number;
+  let isDragging = false;
+  let dragProgress = 0;
 
   if(browser) {
     addEventListener('keydown', (e) => {
@@ -159,28 +162,6 @@
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function handleProgressClick(e: MouseEvent) {
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = x / rect.width;
-    if (duration) {
-     player.seek(percentage * duration);
-    }
-  }
-
-  function handleProgressHover(e: MouseEvent) {
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = x / rect.width;
-    hoveredTime = percentage * duration;
-    tooltipX = x;
-    isHovering = true;
-  }
-
-  function handleProgressLeave() {
-    isHovering = false;
-  }
-
   async function toggleFullscreen() {
     isFullscreen = !isFullscreen;
     sidebarHidden.set(isFullscreen);
@@ -238,18 +219,66 @@
 
   onMount(() => {
     setupMediaSession();
+    startProgressTracking();
     
-    const interval = setInterval(() => {
-      progress = player.getProgress();
-      duration = player.getDuration();
-      updateCurrentLyric();
-    }, 100);
-
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleProgressMouseUp();
+      }
+    };
+    
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    
     return () => {
-      clearInterval(interval);
-      if (volumeTimeout) clearTimeout(volumeTimeout);  
+      if (progressInterval) clearInterval(progressInterval);
+      if (volumeTimeout) clearTimeout(volumeTimeout);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
   });
+
+  function startProgressTracking() {
+    if (progressInterval) clearInterval(progressInterval);
+    progressInterval = window.setInterval(() => {
+      if (!isDragging) {
+        progress = player.getProgress();
+        duration = player.getDuration();
+      }
+      updateCurrentLyric();
+    }, 16); // 60fps $$$$
+  }
+
+  function handleProgressMouseDown(e: MouseEvent) {
+    isDragging = true;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = x / rect.width;
+    dragProgress = percentage * duration;
+    progress = dragProgress;
+  }
+
+  function handleProgressMouseUp() {
+    isDragging = false;
+    if (duration) {
+      console.log(dragProgress, duration);
+      player.seek(dragProgress);
+    }
+  }
+
+  function handleProgressMove(e: MouseEvent) {
+    if (!isDragging && !isHovering) return;
+    
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = x / rect.width;
+    tooltipX = x;
+    
+    if (isDragging) {
+      dragProgress = percentage * duration;
+      progress = dragProgress;
+    } else {
+      hoveredTime = percentage * duration;
+    }
+  }
 </script>
 
 {#if $player.currentTrack}
@@ -275,31 +304,39 @@
   >
     {#if duration > 0}
       <div class="absolute top-0 left-0 right-0">
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div 
-          class="relative h-1 bg-primary/20 cursor-pointer group"
-          on:click={handleProgressClick}
-          on:mousemove={handleProgressHover}
-          on:mouseleave={handleProgressLeave}
+          class="relative group"
+          on:mousedown={handleProgressMouseDown}
+          on:mouseup={handleProgressMouseUp}
+          on:mousemove={handleProgressMove}
+          on:mouseleave={() => {
+            isHovering = false;
+            if (isDragging) handleProgressMouseUp();
+          }}
+          on:mouseenter={() => isHovering = true}
         >
-          <div 
-            class="absolute h-1 bg-primary transition-all duration-300"
-            style:width="{(progress / duration) * 100}%"
-          ></div>
-          {#if isHovering}
+          <div class="h-1 bg-primary/20 cursor-pointer transition-all duration-300 group-hover:h-2">
             <div 
-              class="absolute h-1 bg-primary/30"
-              style="view-transition-name: active;"
-              style:width="{(hoveredTime / duration) * 100}%"
-            ></div>
-            <div 
-              class="absolute bottom-4 py-1 px-2 rounded bg-surface shadow text-xs transform -translate-x-1/2"
-              style="left: {tooltipX}px"
+              class="absolute h-full bg-primary transition-all duration-300 ease-in-out rounded-full"
+              style:width="{(progress / duration * 100)}%"
             >
-              {formatTime(hoveredTime)}
+              <div 
+                class="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full scale-0 group-hover:scale-100 transition-transform duration-200 shadow-lg"
+              ></div>
             </div>
-          {/if}
+            {#if isHovering}
+              <div 
+                class="absolute h-full bg-primary/30 transition-[width] duration-75 ease-linear"
+                style:width="{((isDragging ? progress : hoveredTime) / duration * 100)}%"
+              ></div>
+              <div 
+                class="absolute bottom-full py-1 px-2 rounded bg-surface shadow-lg text-xs transform -translate-x-1/2 mb-2 pointer-events-none"
+                style="left: {tooltipX}px"
+              >
+                {formatTime(isDragging ? progress : hoveredTime)}
+              </div>
+            {/if}
+          </div>
         </div>
         <div class="flex justify-between px-4 text-xs text-text-secondary mt-1">
           <span>{formatTime(progress)}</span>
@@ -571,6 +608,3 @@
     </div>
   </div>
 {/if}
-
-<style>
-</style>
