@@ -19,12 +19,8 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-internal-toggle-maximize",
     "updater:allow-check",
-    "updater:deny-check",
     "updater:allow-download",
-    "updater:deny-download",
     "updater:allow-download-and-install",
-    "updater:deny-download-and-install",
-    "updater:allow-install",
-    "updater:deny-install"
+    "updater:allow-install"
   ]
 }

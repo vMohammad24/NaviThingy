@@ -267,16 +267,11 @@
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div 
-    class="fixed transition-all duration-300 z-30 border-primary/20"
-    class:bottom-0={!isFullscreen}
-    class:top-0={isFullscreen}
-    class:left-0={true}
-    class:right-0={true}
-    class:h-screen={isFullscreen}
-    class:p-4={true}
-    class:border-t={!isFullscreen}
-    class:backdrop-blur-2xl={isFullscreen}
-    class:backdrop-blur-md={!isFullscreen}
+    class={`fixed transition-all duration-300 z-30 border-primary/20 p-4 ${
+      isFullscreen ? 'top-0 h-screen' : 'bottom-0'
+    } left-0 right-0 ${
+      isFullscreen ? 'backdrop-blur-2xl' : 'backdrop-blur-md border-t'
+    }`}
   >
     {#if duration > 0}
       <div class="absolute top-0 left-0 right-0">
@@ -308,7 +303,7 @@
         </div>
         <div class="flex justify-between px-4 text-xs text-text-secondary mt-1">
           <span>{formatTime(progress)}</span>
-          <span>{isHovering ? formatTime(hoveredTime) : formatTime(duration)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
       </div>
     {/if}
@@ -355,7 +350,9 @@
                         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                         {#if i === currentLyricIndex}
                           <p
-                            class="text-2xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary bg-primary/10 p-4 rounded-lg"
+                            class={`text-2xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary ${
+                              i === currentLyricIndex ? 'bg-primary/10 p-4 rounded-lg' : 'hover:bg-primary/5 p-4 rounded-lg'
+                            }`}
                             class:text-primary={i === currentLyricIndex}
                             class:opacity-50={i !== currentLyricIndex}
                             bind:this={currentLyricElement}
@@ -365,7 +362,9 @@
                           </p>
                         {:else}
                           <p
-                            class="text-xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary hover:bg-primary/5 p-4 rounded-lg"
+                            class={`text-xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary ${
+                              i === currentLyricIndex ? 'bg-primary/10 p-4 rounded-lg' : 'hover:bg-primary/5 p-4 rounded-lg'
+                            }`}
                             class:text-primary={i === currentLyricIndex}
                             class:opacity-50={i !== currentLyricIndex}
                             on:click={() => seekToLyric(line.time)}
@@ -395,8 +394,9 @@
           <div class="w-full p-4 bg-surface/50 rounded-lg flex justify-center">
             <div class="flex items-center gap-6">
               <button 
-                class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-                class:text-primary={$player.shuffle}
+                class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
+                  $player.shuffle ? 'text-primary' : ''
+                }`}
                 on:click={() => player.toggleShuffle()}
               >
                 <Shuffle size={24} />
@@ -428,8 +428,9 @@
               </button>
               
               <button 
-                class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-                class:text-primary={$player.repeat !== 'none'}
+                class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
+                  $player.repeat !== 'none' ? 'text-primary' : ''
+                }`}
                 on:click={() => player.toggleRepeat()}
               >
                 {#if $player.repeat === 'one'}
@@ -460,8 +461,9 @@
           
           <div class="flex items-center gap-6">
             <button 
-              class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-              class:text-primary={$player.shuffle}
+              class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
+                $player.shuffle ? 'text-primary' : ''
+              }`}
               on:click={() => player.toggleShuffle()}
             >
               <Shuffle size={20} />
@@ -493,8 +495,9 @@
             </button>
             
             <button 
-              class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-              class:text-primary={$player.repeat !== 'none'}
+              class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
+                $player.repeat !== 'none' ? 'text-primary' : ''
+              }`}
               on:click={() => player.toggleRepeat()}
             >
               {#if $player.repeat === 'one'}
@@ -526,9 +529,9 @@
               
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div 
-                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-lg bg-surface shadow-lg transition-opacity duration-200"
-                class:opacity-0={!showVolume}
-                class:pointer-events-none={!showVolume}
+                class={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-lg bg-surface shadow-lg transition-opacity duration-200 ${
+                  !showVolume ? 'opacity-0 pointer-events-none' : ''
+                }`}
                 on:mouseenter={handleVolumeHover}
                 on:mouseleave={handleVolumeLeave}
               >
@@ -555,8 +558,9 @@
               </div>
             </div>
             <button 
-              class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-              class:text-primary={isFullscreen}
+              class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
+                isFullscreen ? 'text-primary' : ''
+              }`}
               on:click={toggleFullscreen}
             >
               <Maximize2 size={20} />

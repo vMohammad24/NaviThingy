@@ -12,6 +12,7 @@ class AudioPlayer {
     public volume: number;
     public progress = 0;
     public duration = 0;
+    private onEndedCallback?: () => void;
 
     constructor() {
         this.audio = new Audio();
@@ -21,6 +22,13 @@ class AudioPlayer {
         this.audio.addEventListener('timeupdate', () => {
             this.progress = this.audio.currentTime;
             this.duration = this.audio.duration;
+        });
+
+
+        this.audio.addEventListener('ended', () => {
+            if (this.onEndedCallback) {
+                this.onEndedCallback();
+            }
         });
     }
 
@@ -56,7 +64,12 @@ class AudioPlayer {
     }
 
     onEnded(callback: () => void) {
-        this.audio.addEventListener('ended', callback);
+        this.onEndedCallback = callback;
+    }
+
+    reset() {
+        this.progress = 0;
+        this.duration = 0;
     }
 }
 
@@ -105,6 +118,35 @@ function createPlayerStore() {
         const album = await client.getAlbumDetails(albumId);
         return album.song || [];
     }
+
+    audioPlayer.onEnded(() => {
+        update(state => {
+            if (state.repeat === 'one') {
+                audioPlayer.playStream(state.currentTrack!);
+                return state;
+            }
+
+            let nextIndex = state.currentIndex + 1;
+            if (nextIndex >= state.playlist.length) {
+                if (state.repeat === 'all') {
+                    nextIndex = 0;
+                } else {
+                    return { ...state, isPlaying: false };
+                }
+            }
+
+            const nextTrack = state.playlist[nextIndex];
+            audioPlayer.reset();
+            audioPlayer.playStream(nextTrack);
+            updateMediaMetadata(nextTrack);
+
+            return {
+                ...state,
+                currentIndex: nextIndex,
+                currentTrack: nextTrack
+            };
+        });
+    });
 
     return {
         subscribe,
@@ -159,11 +201,20 @@ function createPlayerStore() {
                     }
                 }
 
-                return {
+                const nextTrack = state.playlist[nextIndex];
+                const newState = {
                     ...state,
                     currentIndex: nextIndex,
-                    currentTrack: state.playlist[nextIndex]
+                    currentTrack: nextTrack
                 };
+
+                if (state.isPlaying) {
+                    audioPlayer.reset();
+                    audioPlayer.playStream(nextTrack);
+                    updateMediaMetadata(nextTrack);
+                }
+
+                return newState;
             });
         },
         previous: () => {
@@ -179,11 +230,20 @@ function createPlayerStore() {
                     }
                 }
 
-                return {
+                const prevTrack = state.playlist[prevIndex];
+                const newState = {
                     ...state,
                     currentIndex: prevIndex,
-                    currentTrack: state.playlist[prevIndex]
+                    currentTrack: prevTrack
                 };
+
+                if (state.isPlaying) {
+                    audioPlayer.reset();
+                    audioPlayer.playStream(prevTrack);
+                    updateMediaMetadata(prevTrack);
+                }
+
+                return newState;
             });
         },
         togglePlay: () => update(state => {
