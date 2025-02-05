@@ -1,6 +1,7 @@
 import { updateMediaMetadata, updateMediaPlaybackState } from '$lib/mediaSession';
 import { NavidromeClient } from '$lib/navidrome';
 import type { Child } from '@vmohammad/subsonic-api';
+import toast from 'svelte-french-toast';
 import { writable } from 'svelte/store';
 import { client as cl } from './client';
 
@@ -8,37 +9,141 @@ export type RepeatMode = 'none' | 'one' | 'all';
 
 class AudioPlayer {
     private audio: HTMLAudioElement;
+    private preloadedAudio: HTMLAudioElement | null = null;
     private client: NavidromeClient | null = null;
+    private state: PlayerState | null = null;
     public volume: number;
     public progress = 0;
     public duration = 0;
     private onEndedCallback?: () => void;
 
-    constructor() {
+    constructor(initialState: PlayerState) {
         this.audio = new Audio();
         this.volume = Number(localStorage.getItem('volume') ?? '1');
         this.audio.volume = this.volume;
+        this.state = initialState;
 
         this.audio.addEventListener('timeupdate', () => {
             this.progress = this.audio.currentTime;
             this.duration = this.audio.duration;
-        });
 
+            if (this.duration - this.progress <= 10 && !this.preloadedAudio) {
+                this.preloadNext();
+            }
+        });
 
         this.audio.addEventListener('ended', () => {
             if (this.onEndedCallback) {
                 this.onEndedCallback();
             }
         });
+
+
+        this.audio.addEventListener('error', () => {
+            console.error('Audio playback error:', this.audio.error);
+            if (this.state?.isPlaying) {
+                this.state.isPlaying = false;
+            }
+        });
+
+
+        this.audio.addEventListener('playing', () => {
+            if (this.state && !this.state.isPlaying) {
+                this.state.isPlaying = true;
+            }
+        });
+
+
+        this.audio.addEventListener('pause', () => {
+            if (this.state?.isPlaying) {
+                this.state.isPlaying = false;
+            }
+        });
+    }
+
+    private async preloadNext() {
+        if (!this.client || !this.state) return;
+
+        const nextIndex = this.state.currentIndex + 1;
+        if (nextIndex >= this.state.playlist.length) {
+            if (this.state.repeat !== 'all') return;
+
+            const nextTrack = this.state.playlist[0];
+            await this.preloadTrack(nextTrack);
+        } else {
+            const nextTrack = this.state.playlist[nextIndex];
+            await this.preloadTrack(nextTrack);
+        }
+    }
+
+    private async preloadTrack(track: Child) {
+        if (!this.client) return;
+        try {
+            const stream = await this.client.getSongStreamURL(track.id);
+            this.preloadedAudio = new Audio(stream);
+            this.preloadedAudio.preload = 'auto';
+            this.preloadedAudio.volume = this.volume;
+        } catch (error) {
+            console.error('Preload failed:', error);
+            toast.error(`Failed to preload next track: ${track.title}`);
+            this.preloadedAudio = null;
+        }
+    }
+
+    setState(state: PlayerState) {
+        this.state = state;
+    }
+
+    private async saveProgress() {
+        if (!this.client || !this.state || !this.state.currentTrack) return;
+        await this.client?.saveQueue({
+            current: this.state?.currentTrack.id,
+            position: this.audio.currentTime,
+            id: this.state.playlist.map(t => t.id).join(',')
+        });
     }
 
     async playStream(track: Child) {
-        if (!this.client) return;
-        this.client.scrobble(track.id, true);
-        const stream = await this.client.getSongStreamURL(track.id);
-        this.audio.src = stream;
-        this.audio.volume = this.volume;
-        return this.audio.play();
+        if (!this.client || !this.state) return;
+
+        try {
+            this.client.scrobble(track.id, true);
+            if (this.state.scrobble) this.client.scrobble(track.id, false);
+
+            if (this.preloadedAudio) {
+                const oldAudio = this.audio;
+                this.audio = this.preloadedAudio;
+                this.preloadedAudio = null;
+                oldAudio.src = '';
+
+                await this.audio.play();
+            } else {
+                const stream = await this.client.getSongStreamURL(track.id);
+                this.audio.src = stream;
+                this.audio.volume = this.volume;
+                await this.audio.play();
+            }
+
+            this.audio.currentTime = 0;
+            this.progress = 0;
+
+            this.saveProgress();
+
+            this.audio.addEventListener('loadedmetadata', () => {
+                updateMediaMetadata({
+                    track,
+                    duration: this.audio.duration,
+                    position: this.audio.currentTime
+                });
+            }, { once: true });
+
+        } catch (error) {
+            console.error('Playback failed:', error);
+            toast.error(`Failed to play: ${track.title}`);
+            if (this.state.isPlaying) {
+                this.state.isPlaying = false;
+            }
+        }
     }
 
     setClient(client: NavidromeClient | null) {
@@ -46,15 +151,37 @@ class AudioPlayer {
     }
 
     pause() {
-        this.audio.pause();
+        if (this.audio.readyState >= 2) {
+            this.audio.pause();
+            this.saveProgress();
+        }
     }
 
-    resume() {
-        return this.audio.play();
+    async resume() {
+        if (this.audio.readyState >= 2) {
+            try {
+                await this.audio.play();
+                this.saveProgress();
+            } catch (error) {
+                console.error('Resume failed:', error);
+                toast.error('Failed to resume playback');
+                if (this.state?.isPlaying) {
+                    this.state.isPlaying = false;
+                }
+            }
+        }
     }
 
     seek(time: number) {
+        if (this.audio.readyState < 2) {
+            this.audio.addEventListener('play', () => {
+                this.audio.currentTime = time;
+
+                this.audio.removeEventListener('play', () => { });
+            });
+        }
         this.audio.currentTime = time;
+        this.saveProgress();
     }
 
     setVolume(value: number) {
@@ -70,6 +197,14 @@ class AudioPlayer {
     reset() {
         this.progress = 0;
         this.duration = 0;
+        if (this.preloadedAudio) {
+            this.preloadedAudio.src = '';
+            this.preloadedAudio = null;
+        }
+    }
+
+    setSource(src: string) {
+        this.audio.src = src;
     }
 }
 
@@ -85,15 +220,7 @@ interface PlayerState {
 }
 
 function createPlayerStore() {
-    const audioPlayer = new AudioPlayer();
-    let client: NavidromeClient | null = null;
-
-    cl.subscribe(cl => {
-        audioPlayer.setClient(cl);
-        client = cl;
-    });
-
-    const { subscribe, update, set } = writable<PlayerState>({
+    const initialState: PlayerState = {
         currentTrack: null,
         currentIndex: -1,
         originalPlaylist: [],
@@ -102,6 +229,53 @@ function createPlayerStore() {
         shuffle: false,
         repeat: 'none',
         scrobble: localStorage.getItem('scrobble') === 'true'
+    };
+
+    const audioPlayer = new AudioPlayer(initialState);
+    let client: NavidromeClient | null = null;
+
+    const { subscribe, update, set } = writable<PlayerState>(initialState);
+
+    subscribe(state => {
+        audioPlayer.setState(state);
+    });
+
+    cl.subscribe(async (newClient) => {
+        audioPlayer.setClient(newClient);
+        client = newClient;
+
+        if (newClient) {
+            const queue = await newClient.getQueue();
+            if (!queue?.entry?.length) return;
+
+            const queueEntry = queue.entry;
+            const startIndex = queue.current ?
+                queueEntry.findIndex(t => t.id === queue.current) :
+                0;
+
+            const currentTrack = queueEntry[startIndex];
+            const stream = await newClient.getSongStreamURL(currentTrack.id);
+            audioPlayer.setSource(stream);
+
+            update(state => ({
+                ...state,
+                originalPlaylist: queueEntry,
+                playlist: queueEntry,
+                currentIndex: startIndex,
+                currentTrack: currentTrack,
+                isPlaying: false
+            }));
+
+
+            if (queue.position) {
+                audioPlayer.seek(queue.position);
+            }
+        }
+    });
+
+    cl.subscribe(cl => {
+        audioPlayer.setClient(cl);
+        client = cl;
     });
 
     function shuffleArray(array: Child[]): Child[] {
@@ -138,7 +312,12 @@ function createPlayerStore() {
             const nextTrack = state.playlist[nextIndex];
             audioPlayer.reset();
             audioPlayer.playStream(nextTrack);
-            updateMediaMetadata(nextTrack);
+            updateMediaMetadata({
+                track: nextTrack,
+                duration: audioPlayer.duration,
+                position: audioPlayer.progress
+            });
+
 
             return {
                 ...state,
@@ -163,7 +342,11 @@ function createPlayerStore() {
                 };
                 if (autoplay && newState.currentTrack) {
                     audioPlayer.playStream(newState.currentTrack);
-                    updateMediaMetadata(newState.currentTrack);
+                    updateMediaMetadata({
+                        track: newState.currentTrack,
+                        duration: audioPlayer.duration,
+                        position: audioPlayer.progress
+                    });
                 }
                 return newState;
             });
@@ -211,7 +394,11 @@ function createPlayerStore() {
                 if (state.isPlaying) {
                     audioPlayer.reset();
                     audioPlayer.playStream(nextTrack);
-                    updateMediaMetadata(nextTrack);
+                    updateMediaMetadata({
+                        track: nextTrack,
+                        duration: audioPlayer.duration,
+                        position: audioPlayer.progress
+                    });
                 }
 
                 return newState;
@@ -240,7 +427,11 @@ function createPlayerStore() {
                 if (state.isPlaying) {
                     audioPlayer.reset();
                     audioPlayer.playStream(prevTrack);
-                    updateMediaMetadata(prevTrack);
+                    updateMediaMetadata({
+                        track: prevTrack,
+                        duration: audioPlayer.duration,
+                        position: audioPlayer.progress
+                    });
                 }
 
                 return newState;
@@ -249,7 +440,9 @@ function createPlayerStore() {
         togglePlay: () => update(state => {
             const newState = { ...state, isPlaying: !state.isPlaying };
             if (newState.isPlaying) {
-                audioPlayer.resume();
+                audioPlayer.resume().catch(() => {
+                    update(s => ({ ...s, isPlaying: false }));
+                });
             } else {
                 audioPlayer.pause();
             }
@@ -279,7 +472,11 @@ function createPlayerStore() {
 
                 audioPlayer.reset();
                 audioPlayer.playStream(shuffledSongs[0]);
-                updateMediaMetadata(shuffledSongs[0]);
+                updateMediaMetadata({
+                    track: shuffledSongs[0],
+                    duration: audioPlayer.duration,
+                    position: audioPlayer.progress
+                });
 
                 return newState;
             });

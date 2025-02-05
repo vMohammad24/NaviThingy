@@ -1,18 +1,25 @@
-
 import type { Child } from '@vmohammad/subsonic-api';
 import { player } from './stores/player';
 
 export function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
 
-    navigator.mediaSession.setActionHandler('play', () => player.play());
-    navigator.mediaSession.setActionHandler('pause', () => player.pause());
+    navigator.mediaSession.setActionHandler('play', () => player.togglePlay());
+    navigator.mediaSession.setActionHandler('pause', () => player.togglePlay());
     navigator.mediaSession.setActionHandler('previoustrack', () => player.previous());
     navigator.mediaSession.setActionHandler('nexttrack', () => player.next());
     navigator.mediaSession.setActionHandler('stop', () => player.stop());
 }
 
-export function updateMediaMetadata(track: Child) {
+export function updateMediaMetadata({
+    track,
+    duration,
+    position
+}: {
+    track: Child;
+    duration: number;
+    position: number;
+}) {
     if (!('mediaSession' in navigator)) return;
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -23,6 +30,14 @@ export function updateMediaMetadata(track: Child) {
             { src: track.coverArt!, sizes: '512x512', type: 'image/jpeg' }
         ]
     });
+
+    if (duration && !isNaN(duration) && !isNaN(position)) {
+        navigator.mediaSession.setPositionState({
+            playbackRate: 1,
+            position,
+            duration
+        });
+    }
 }
 
 export function updateMediaPlaybackState(isPlaying: boolean) {

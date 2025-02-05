@@ -6,15 +6,19 @@
   import { servers } from '$lib/stores/servers';
   import { theme } from '$lib/stores/theme';
   import type { Theme } from '$lib/types/theme';
+  import { getTauriVersion, getVersion } from '@tauri-apps/api/app';
   import { relaunch } from '@tauri-apps/plugin-process';
   import { check } from '@tauri-apps/plugin-updater';
+  import { onMount } from 'svelte';
+  import toast from 'svelte-french-toast';
     
     $: currentTheme = theme.themes.find(t => t.id === $theme);
     let customTheme = { ...currentTheme, name: '' };
     let showCustomThemeEditor = false;
     let importUrl = '';
     let fileInput: HTMLInputElement;
-
+    let tauriVersion = '';
+    let version = '';
     let contextMenu = {
         show: false,
         x: 0,
@@ -31,6 +35,11 @@
         total: 0,
         status: null as 'Started' | 'Progress' | 'Finished' | null
     };
+
+    onMount(async () => {
+        tauriVersion = await getTauriVersion();
+        version = await getVersion();
+    });
 
     function handleContextMenu(event: MouseEvent, t: Theme) {
         event.preventDefault();
@@ -144,8 +153,16 @@
         checking = true;
         updateError = null;
         try {
-            const update = await check();
+            const updatePromise = check({
+                target: "https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json"
+            });
+            const update = await toast.promise(updatePromise, {
+                loading: 'Checking for updates...',
+                success: 'Checked for updates',
+                error: 'Failed to check for updates'
+            });
             updateAvailable = update?.available || false;
+            
         } catch (e) {
             updateError = (e as Error).message;
         } finally {
@@ -345,7 +362,8 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="font-medium">Version</h3>
-                    <p class="text-sm text-text-secondary">0.2.0</p>
+                    <p class="text-sm text-text-secondary">App: {version}</p>
+                    <p class="text-sm text-text-secondary">Tauri: {tauriVersion}</p>
                 </div>
                 <button
                     class="px-3 py-1 rounded-lg text-sm font-medium transition-all {checking ? 'bg-surface' : updateAvailable ? 'bg-green-500 text-background' : 'bg-primary text-background'}"

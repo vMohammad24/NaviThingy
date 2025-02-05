@@ -1,6 +1,6 @@
 {
   "name": "navithingy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "type": "module",
   "scripts": {
@@ -17,8 +17,9 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "^2.2.0",
     "@tauri-apps/plugin-updater": "~2",
-    "lucide-svelte": "latest",
     "@vmohammad/subsonic-api": "3.1.2",
+    "lucide-svelte": "latest",
+    "svelte-french-toast": "latest",
     "uuid": "latest"
   },
   "devDependencies": {

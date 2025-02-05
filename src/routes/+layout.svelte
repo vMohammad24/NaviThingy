@@ -8,6 +8,8 @@
   import { theme } from '$lib/stores/theme';
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { Maximize, Minimize, X } from 'lucide-svelte';
+  import { Toaster } from 'svelte-french-toast';
+
   import "../app.css";
   
   let showSearch = false;
@@ -81,3 +83,6 @@
     <AudioPlayer />
   </div>
 </div>
+<Toaster position="bottom-center" 
+ toastOptions={{style: "background-color: var(--color-surface); color: var(--color-text);", duration: 5000}}
+/>
