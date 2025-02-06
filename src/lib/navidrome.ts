@@ -243,6 +243,10 @@ export class NavidromeClient {
         }
     }
 
+    async setRating(id: string, rating: number) {
+        return await this.api.setRating({ id, rating });
+    }
+
     private async getLyricsFromLRCLIB(song: Child): Promise<LyricsResult | undefined> {
         try {
             const params = new URLSearchParams({
