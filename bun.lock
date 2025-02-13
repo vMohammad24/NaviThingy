@@ -8,9 +8,9 @@
         "@tauri-apps/plugin-opener": "^2",
         "@tauri-apps/plugin-process": "^2.2.0",
         "@tauri-apps/plugin-updater": "~2",
-        "@vmohammad/subsonic-api": "3.1.2",
+        "@vmohammad/subsonic-api": "3.1.5",
         "lucide-svelte": "latest",
-        "svelte-french-toast": "^1.2.0",
+        "svelte-french-toast": "latest",
         "uuid": "latest",
       },
       "devDependencies": {
@@ -195,7 +195,7 @@
 
     "@types/uuid": ["@types/uuid@10.0.0", "", {}, "sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ=="],
 
-    "@vmohammad/subsonic-api": ["@vmohammad/subsonic-api@3.1.2", "", {}, "sha512-LssYy4BSX7a2n7FJJdIM2Z3B8Q8FZ4l1Y1ZDimFpyjglh5o21lOPv/ZtDJ2qcKPQuPH3TU8QK1IrUqBgo/nUVA=="],
+    "@vmohammad/subsonic-api": ["@vmohammad/subsonic-api@3.1.5", "", {}, "sha512-bjVC3pLQUUCCxGx9apoU2GOAJN33NHYspNNmytuGRSnFf0Ty6B6PbfYhJEi/Cq4ToZqrcWYfqHoPu+8U6LXDbw=="],
 
     "acorn": ["acorn@8.14.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA=="],
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { download } from "$lib/client/util";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
+  import Modal from "$lib/components/Modal.svelte";
   import { player } from "$lib/stores/player";
   import { selectedServer } from "$lib/stores/selectedServer";
   import { servers } from "$lib/stores/servers";
@@ -9,6 +10,7 @@
   import { getTauriVersion, getVersion } from "@tauri-apps/api/app";
   import { relaunch } from "@tauri-apps/plugin-process";
   import { check } from "@tauri-apps/plugin-updater";
+  import { X } from "lucide-svelte";
   import { onMount } from "svelte";
   import toast from "svelte-french-toast";
 
@@ -231,6 +233,62 @@
           {$player.scrobble ? "Enabled" : "Disabled"}
         </button>
       </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-medium">ReplayGain</h3>
+          <p class="text-sm text-text-secondary">
+            Volume normalization using ReplayGain metadata
+          </p>
+        </div>
+        <button
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all {$player
+            .replayGain.enabled
+            ? 'bg-primary text-background'
+            : 'bg-surface'}"
+          on:click={() =>
+            player.setReplayGainEnabled(!$player.replayGain.enabled)}
+        >
+          {$player.replayGain.enabled ? "Enabled" : "Disabled"}
+        </button>
+      </div>
+
+      {#if $player.replayGain.enabled}
+        <div class="space-y-2">
+          <div class="flex items-center gap-4">
+            <label for="replaygain-mode" class="text-sm">Mode:</label>
+            <select
+              id="replaygain-mode"
+              class="px-2 py-1 rounded-lg bg-background"
+              bind:value={$player.replayGain.mode}
+              on:change={(e) =>
+                player.setReplayGainMode(e.currentTarget.value as any)}
+            >
+              <option value="track">Track Gain</option>
+              <option value="album">Album Gain</option>
+              <option value="queue">Queue Average</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <label for="replaygain-preamp" class="text-sm">Pre-amp:</label>
+            <input
+              id="replaygain-preamp"
+              type="range"
+              min="-15"
+              max="15"
+              step="0.1"
+              class="flex-1"
+              bind:value={$player.replayGain.preAmp}
+              on:change={(e) =>
+                player.setReplayGainPreAmp(Number(e.currentTarget.value))}
+            />
+            <span class="text-sm w-12 text-right"
+              >{$player.replayGain.preAmp}dB</span
+            >
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -373,6 +431,146 @@
         : []}
       on:close={() => (contextMenu.show = false)}
     />
+
+    <Modal
+      show={showCustomThemeEditor}
+      maxWidth="max-w-4xl"
+      onClose={() => (showCustomThemeEditor = false)}
+    >
+      <div class="bg-surface p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-semibold">
+            {isCreating ? "Create Theme" : "Customize Theme"}
+          </h3>
+          <button
+            class="p-2 hover:bg-background/50 rounded-full"
+            on:click={() => (showCustomThemeEditor = false)}
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="space-y-6">
+            <div>
+              <label for="theme-name" class="block text-sm font-medium mb-2"
+                >Theme Name</label
+              >
+              <input
+                id="theme-name"
+                type="text"
+                bind:value={customTheme.name}
+                class="w-full p-3 rounded-lg bg-background text-text border border-background focus:border-primary outline-none"
+                placeholder="Enter theme name"
+              />
+            </div>
+
+            <div class="space-y-4">
+              <h4 class="font-medium">Colors</h4>
+              {#each Object.entries(customTheme.colors) as [key, value]}
+                <div>
+                  <label
+                    for={key}
+                    class="block text-sm font-medium mb-2 capitalize"
+                    >{key}</label
+                  >
+                  <div class="flex gap-3">
+                    <div class="relative">
+                      <input
+                        id={`${key}-color`}
+                        type="color"
+                        bind:value={customTheme.colors[key]}
+                        class="w-12 h-10 rounded cursor-pointer border-0"
+                      />
+                      <div
+                        class="absolute inset-0 rounded pointer-events-none"
+                        style="background-color: {value}"
+                      ></div>
+                    </div>
+                    <input
+                      type="text"
+                      bind:value={customTheme.colors[key]}
+                      class="flex-1 p-3 rounded-lg bg-background text-text border border-background focus:border-primary outline-none font-mono"
+                      placeholder="Enter color value"
+                    />
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <div class="rounded-lg overflow-hidden shadow-lg">
+            <div
+              class="p-6"
+              style="background-color: {customTheme.colors
+                .background}; color: {customTheme.colors.text}"
+            >
+              <h4 class="text-lg font-semibold mb-4">Theme Preview</h4>
+
+              <div class="space-y-4">
+                <div class="space-y-2">
+                  <button
+                    class="px-4 py-2 rounded-lg w-full"
+                    style="background-color: {customTheme.colors
+                      .primary}; color: {customTheme.colors.background}"
+                  >
+                    Primary Button
+                  </button>
+                  <button
+                    class="px-4 py-2 rounded-lg w-full"
+                    style="background-color: {customTheme.colors
+                      .secondary}; color: {customTheme.colors.background}"
+                  >
+                    Secondary Button
+                  </button>
+                </div>
+
+                <div
+                  class="rounded-lg p-4"
+                  style="background-color: {customTheme.colors.surface}"
+                >
+                  <h5 class="font-medium mb-2">Surface Example</h5>
+                  <p
+                    style="color: {customTheme.colors.textSecondary}"
+                    class="text-sm"
+                  >
+                    This is how secondary text will look in your theme.
+                  </p>
+                </div>
+
+                <div class="space-y-2">
+                  <p>Regular text on background</p>
+                  <p style="color: {customTheme.colors.textSecondary}">
+                    Secondary text on background
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex justify-end gap-3 mt-6 pt-4 border-t"
+          style="border-color: {customTheme.colors.surface}"
+        >
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background/50"
+            on:click={() => (showCustomThemeEditor = false)}
+          >
+            Cancel
+          </button>
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-medium"
+            style="background-color: {customTheme.colors
+              .primary}; color: {customTheme.colors.background}"
+            on:click={handleThemeSave}
+            disabled={!customTheme.name}
+          >
+            Save Theme
+          </button>
+        </div>
+      </div>
+    </Modal>
   </div>
 
   <div class="rounded-lg p-6 shadow-lg bg-surface">

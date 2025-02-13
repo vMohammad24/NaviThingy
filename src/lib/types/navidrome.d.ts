@@ -27,9 +27,3 @@ export interface LyricsResult {
     plain: string;
     lines: SyncedLyric[];
 }
-
-export interface Genre {
-    value: string;
-    songCount: number;
-    albumCount: number;
-}

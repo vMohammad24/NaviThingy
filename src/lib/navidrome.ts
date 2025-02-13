@@ -1,4 +1,4 @@
-import { SubsonicAPI, type AlbumList, type Child } from '@vmohammad/subsonic-api';
+import { SubsonicAPI, type AlbumList, type Child, type Genre } from '@vmohammad/subsonic-api';
 import type { LRCLIBResponse, LyricsResult, NavidromeServer, SyncedLyric } from './types/navidrome';
 
 export class NavidromeClient {
@@ -19,12 +19,8 @@ export class NavidromeClient {
             client: 'NaviThingy'
         });
     }
-    async getGenres(): Promise<{
-        value: string;
-        albumCount: number;
-        songCount: number;
-    }[] | undefined> {
-        return (await this.api.getGenres()).genres.genre as any;
+    async getGenres(): Promise<Genre[] | undefined> {
+        return (await this.api.getGenres()).genres.genre;
     }
 
     async getUserData(full: boolean = false) {
@@ -35,13 +31,25 @@ export class NavidromeClient {
     }
 
     async getPlaylists() {
-        return (await this.api.getPlaylists()).playlists.playlist;
+        let playlists = (await this.api.getPlaylists()).playlists.playlist;
+        if (playlists) {
+            playlists = await Promise.all(playlists.map(async (playlist) => {
+                if (playlist.coverArt) {
+                    playlist.coverArt = await this.getCoverURL(playlist.coverArt);
+                }
+                return playlist;
+            }));
+        }
+        return playlists;
     }
 
     async getPlaylist(id: string) {
         const playlist = (await this.api.getPlaylist({ id })).playlist;
         if (playlist.entry) {
             playlist.entry = await this.sanitizeChildren(playlist.entry);
+        }
+        if (playlist.coverArt) {
+            playlist.coverArt = await this.getCoverURL(playlist.coverArt);
         }
         return playlist;
     }
@@ -185,14 +193,18 @@ export class NavidromeClient {
         return (await this.api.getArtists()).artists;
     }
 
-    async getSong(id: string) {
+    async getSong(id: string, withSimilar: boolean = false) {
         const { song } = await this.api.getSong({ id });
-        const { similarSongs } = await this.api.getSimilarSongs({ id });
         if (song.coverArt) {
             song.coverArt = (await this.getCoverURL(song.id)).toString();
         }
-        if (similarSongs.song) {
-            similarSongs.song = await this.sanitizeChildren(similarSongs.song);
+        let similarSongs: Child[] = [];
+        if (withSimilar) {
+            const { similarSongs: sim } = await this.api.getSimilarSongs({ id });
+            if (sim.song) {
+                sim.song = await this.sanitizeChildren(sim.song);
+            }
+            similarSongs = sim.song || [];
         }
         return { song, similarSongs };
     }
@@ -261,8 +273,12 @@ export class NavidromeClient {
 
             if (!response.ok) {
                 if (song.artist?.includes(',')) {
-                    const artist = song.artist.split(',')[0];
+                    const artist = song.artist.split(',')[0].trim();
                     return await this.getLyricsFromLRCLIB({ ...song, artist });
+                }
+                if (song.title?.includes('(')) {
+                    const title = song.title.split('(')[0].trim();
+                    return await this.getLyricsFromLRCLIB({ ...song, title });
                 }
                 return undefined;
             };

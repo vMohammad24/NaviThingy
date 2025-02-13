@@ -17,7 +17,6 @@
     User,
   } from "lucide-svelte";
   import ContextMenu from "./ContextMenu.svelte";
-  import Rating from "./Rating.svelte";
 
   let {
     song,
@@ -222,13 +221,13 @@
       action: () => handleMenuAction("favorite"),
       icon: song.starred ? HeartCrack : Heart,
     },
-    {
-      item: Rating,
-      props: {
-        id: song.id,
-        rating: song.userRating ?? 0,
-      },
-    },
+    // {
+    //   item: Rating,
+    //   props: {
+    //     id: song.id,
+    //     rating: song.userRating ?? 0,
+    //   },
+    // },
     {
       label: "Download",
       action: () => handleMenuAction("download"),

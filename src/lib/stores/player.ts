@@ -103,6 +103,38 @@ class AudioPlayer {
         });
     }
 
+    private applyReplayGain(track: Child) {
+        if (!this.state?.replayGain.enabled || !track.replayGain) {
+            this.audio.volume = this.volume;
+            return;
+        }
+
+        const rg = track.replayGain;
+        let gain = 1.0;
+
+        if (this.state.replayGain.mode === 'track' && rg.trackGain !== undefined) {
+            gain = Math.pow(10, rg.trackGain / 20);
+        } else if (this.state.replayGain.mode === 'album' && rg.albumGain !== undefined) {
+            gain = Math.pow(10, rg.albumGain / 20);
+        } else if (rg.fallbackGain !== undefined) {
+            gain = Math.pow(10, rg.fallbackGain / 20);
+        }
+
+        gain *= Math.pow(10, this.state.replayGain.preAmp / 20);
+
+
+        if (rg.baseGain !== undefined) {
+            gain *= Math.pow(10, rg.baseGain / 20);
+        }
+
+
+        const peak = rg.trackPeak ?? rg.albumPeak ?? 1.0;
+        gain = Math.min(gain, 1.0 / peak);
+
+
+        this.audio.volume = Math.min(1.0, this.volume * gain);
+    }
+
     async playStream(track: Child) {
         if (!this.client || !this.state) return;
 
@@ -116,11 +148,12 @@ class AudioPlayer {
                 this.preloadedAudio = null;
                 oldAudio.src = '';
 
+                this.applyReplayGain(track);
                 await this.audio.play();
             } else {
                 const stream = await this.client.getSongStreamURL(track.id);
                 this.audio.src = stream;
-                this.audio.volume = this.volume;
+                this.applyReplayGain(track);
                 await this.audio.play();
             }
 
@@ -175,10 +208,8 @@ class AudioPlayer {
     seek(time: number) {
         if (this.audio.readyState < 2) {
             this.audio.addEventListener('play', () => {
-                this.audio.currentTime = time;
-
-                this.audio.removeEventListener('play', () => { });
-            });
+                this.seek(time);
+            }, { once: true });
         }
         this.audio.currentTime = time;
         this.saveProgress();
@@ -186,7 +217,11 @@ class AudioPlayer {
 
     setVolume(value: number) {
         this.volume = Math.max(0, Math.min(1, value));
-        this.audio.volume = this.volume;
+        if (this.state?.currentTrack) {
+            this.applyReplayGain(this.state.currentTrack);
+        } else {
+            this.audio.volume = this.volume;
+        }
         localStorage.setItem('volume', this.volume.toString());
     }
 
@@ -217,6 +252,11 @@ interface PlayerState {
     shuffle: boolean;
     repeat: RepeatMode;
     scrobble: boolean;
+    replayGain: {
+        enabled: boolean;
+        mode: 'track' | 'album' | 'queue';
+        preAmp: number;
+    }
 }
 
 function createPlayerStore() {
@@ -228,7 +268,12 @@ function createPlayerStore() {
         isPlaying: false,
         shuffle: false,
         repeat: 'none',
-        scrobble: localStorage.getItem('scrobble') === 'true'
+        scrobble: localStorage.getItem('scrobble') === 'true',
+        replayGain: {
+            enabled: localStorage.getItem('replayGainEnabled') === 'true',
+            mode: (localStorage.getItem('replayGainMode') as 'track' | 'album' | 'queue') || 'track',
+            preAmp: Number(localStorage.getItem('replayGainPreAmp')) || 0
+        }
     };
 
     const audioPlayer = new AudioPlayer(initialState);
@@ -537,6 +582,57 @@ function createPlayerStore() {
         getVolume: () => audioPlayer.volume,
         getProgress: () => audioPlayer.progress,
         getDuration: () => audioPlayer.duration,
+
+        setReplayGainEnabled: (enabled: boolean) => {
+            update(state => {
+                localStorage.setItem('replayGainEnabled', enabled.toString());
+                const newState = {
+                    ...state,
+                    replayGain: {
+                        ...state.replayGain,
+                        enabled
+                    }
+                };
+                if (newState.currentTrack) {
+                    audioPlayer.playStream(newState.currentTrack);
+                }
+                return newState;
+            });
+        },
+
+        setReplayGainMode: (mode: 'track' | 'album' | 'queue') => {
+            update(state => {
+                localStorage.setItem('replayGainMode', mode);
+                const newState = {
+                    ...state,
+                    replayGain: {
+                        ...state.replayGain,
+                        mode
+                    }
+                };
+                if (newState.currentTrack) {
+                    audioPlayer.playStream(newState.currentTrack);
+                }
+                return newState;
+            });
+        },
+
+        setReplayGainPreAmp: (preAmp: number) => {
+            update(state => {
+                localStorage.setItem('replayGainPreAmp', preAmp.toString());
+                const newState = {
+                    ...state,
+                    replayGain: {
+                        ...state.replayGain,
+                        preAmp
+                    }
+                };
+                if (newState.currentTrack) {
+                    audioPlayer.playStream(newState.currentTrack);
+                }
+                return newState;
+            });
+        },
     };
 }
 
