@@ -157,10 +157,7 @@
     checking = true;
     updateError = null;
     try {
-      const updatePromise = check({
-        target:
-          "https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json",
-      });
+      const updatePromise = check();
       const update = await toast.promise(updatePromise, {
         loading: "Checking for updates...",
         success: "Checked for updates",
