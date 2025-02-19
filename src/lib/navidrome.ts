@@ -16,7 +16,8 @@ export class NavidromeClient {
         this.api = new SubsonicAPI({
             url: server.url,
             auth: this.auth,
-            client: 'NaviThingy'
+            client: 'NaviThingy',
+            fetch: fetch
         });
     }
     async getGenres(): Promise<Genre[] | undefined> {
@@ -100,6 +101,8 @@ export class NavidromeClient {
         const { album } = await this.api.getAlbum({ id });
         if (album.song) {
             album.song = await this.sanitizeChildren(album.song);
+        } else {
+            album.song = [];
         }
         if (album.coverArt) {
             album.coverArt = await this.getCoverURL(album.id);
@@ -211,7 +214,7 @@ export class NavidromeClient {
 
     async getRandomSongs(size = 1) {
         const { randomSongs } = await this.api.getRandomSongs({
-            size
+            size,
         });
 
         if (randomSongs.song) {

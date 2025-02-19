@@ -12,6 +12,8 @@
     Play,
   } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
+  import { quintOut } from "svelte/easing";
+  import { scale } from "svelte/transition";
   import ContextMenu from "./ContextMenu.svelte";
 
   export let album: Child;
@@ -23,8 +25,6 @@
     x: 0,
     y: 0,
   };
-
-  let isHovered = false;
 
   const dispatch = createEventDispatcher();
 
@@ -40,7 +40,7 @@
 
   function reloadComponent() {
     show = false;
-    setTimeout(() => (show = true), 0); // Re-insert in next tick
+    setTimeout(() => (show = true), 0);
   }
 
   async function handleMenuAction(action: string) {
@@ -90,51 +90,77 @@
   }
 </script>
 
-<a
-  class="rounded-lg overflow-hidden shadow-md transition-all duration-200 hover:shadow-xl relative group bg-surface"
-  on:contextmenu={handleContextMenu}
-  href="/albums/{album.id}"
-  on:mouseenter={() => (isHovered = true)}
-  on:mouseleave={() => (isHovered = false)}
->
-  {#if album.coverArt}
-    <div class="relative">
-      <img
-        src={album.coverArt}
-        alt={album.album}
-        id="album"
-        class="w-full aspect-square object-cover"
-      />
-      <div
-        class="absolute inset-0 bg-black transition-opacity duration-200"
-        style:opacity={isHovered ? "0.3" : "0"}
-      ></div>
-      {#if isPlaying || $player.currentTrack?.id === album.id}
-        <button
-          class="absolute bottom-2 right-2 p-2 rounded-full bg-primary text-background hover:opacity-90 transition-all"
-          on:click={togglePlay}
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="group relative" on:contextmenu={handleContextMenu}>
+  <div
+    class="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-90 -z-10 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:scale-110"
+  ></div>
+
+  <a
+    class="block relative overflow-hidden rounded-2xl bg-surface/30 backdrop-blur-sm border border-white/5 shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/20"
+    href="/albums/{album.id}"
+  >
+    {#if album.coverArt}
+      <div class="relative aspect-square">
+        <img
+          src={album.coverArt}
+          alt={album.album}
+          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          in:scale|local={{ duration: 300, easing: quintOut, start: 0.95 }}
+        />
+        <div
+          class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"
         >
-          {#if isPlaying}
-            <Pause size={20} />
-          {:else}
-            <Play size={20} />
+          {#if isPlaying || $player.currentTrack?.id === album.id}
+            <button
+              class="absolute bottom-4 right-4 p-4 rounded-full bg-primary text-background hover:scale-110 active:scale-95 transition-all shadow-lg"
+              on:click={togglePlay}
+            >
+              {#if isPlaying}
+                <Pause size={24} />
+              {:else}
+                <Play size={24} />
+              {/if}
+            </button>
           {/if}
-        </button>
-      {/if}
-    </div>
-  {/if}
-  {#if showMetadata}
-    <div class="p-4">
-      <h3 class="font-semibold text-lg">{album.album}</h3>
-      <p class="text-text-secondary">
-        {album.artist}
-        {#if album.year}
-          • {album.year}
+        </div>
+      </div>
+    {/if}
+
+    {#if showMetadata}
+      <div class="p-6 space-y-2">
+        <h3
+          class="font-bold text-xl line-clamp-1 group-hover:text-primary transition-colors"
+        >
+          {album.album}
+        </h3>
+        <div class="flex items-center justify-between">
+          <p
+            class="text-text-secondary group-hover:text-text-primary transition-colors"
+          >
+            {album.artist}
+          </p>
+          {#if album.year}
+            <span
+              class="text-sm px-2 py-1 rounded-full bg-surface/50 text-text-secondary"
+            >
+              {album.year}
+            </span>
+          {/if}
+        </div>
+        {#if isPlaying}
+          <div
+            class="h-1 w-full bg-surface/30 rounded-full overflow-hidden mt-4"
+          >
+            <div
+              class="h-full bg-primary rounded-full w-1/2 animate-progress"
+            ></div>
+          </div>
         {/if}
-      </p>
-    </div>
-  {/if}
-</a>
+      </div>
+    {/if}
+  </a>
+</div>
 
 <ContextMenu
   bind:show={contextMenu.show}

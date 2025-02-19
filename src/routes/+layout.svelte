@@ -67,7 +67,9 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div
-  class="fixed top-0 right-0 z-50 h-8 flex w-screen justify-end"
+  class="fixed top-0 right-0 z-50 h-8 flex w-screen justify-end {$sidebarHidden
+    ? 'hidden'
+    : ''}"
   data-tauri-drag-region
 >
   <button

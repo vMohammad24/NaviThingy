@@ -194,7 +194,6 @@ class AudioPlayer {
         if (this.audio.readyState >= 2) {
             try {
                 await this.audio.play();
-                this.saveProgress();
             } catch (error) {
                 console.error('Resume failed:', error);
                 toast.error('Failed to resume playback');
@@ -302,6 +301,10 @@ function createPlayerStore() {
             const stream = await newClient.getSongStreamURL(currentTrack.id);
             audioPlayer.setSource(stream);
 
+            if (queue.position) {
+                audioPlayer.seek(queue.position);
+            }
+
             update(state => ({
                 ...state,
                 originalPlaylist: queueEntry,
@@ -310,11 +313,6 @@ function createPlayerStore() {
                 currentTrack: currentTrack,
                 isPlaying: false
             }));
-
-
-            if (queue.position) {
-                audioPlayer.seek(queue.position);
-            }
         }
     });
 
@@ -496,11 +494,20 @@ function createPlayerStore() {
         }),
         play: () => update(state => ({ ...state, isPlaying: true })),
         pause: () => update(state => ({ ...state, isPlaying: false })),
-        playAlbum: async (album: Child, shuffle = false) => {
+        playAlbum: async (album: Child | Child[], shuffle = false) => {
             if (!client) return;
 
-            const songs = await getSongsFromAlbum(album.id);
-            if (!songs.length) return;
+            const songs: Child[] = [];
+            if (Array.isArray(album)) {
+                await Promise.all(album.map(async a => {
+                    const albumSongs = await getSongsFromAlbum(a.id);
+                    songs.push(...albumSongs);
+                }))
+            } else {
+                const albumSongs = await getSongsFromAlbum(album.id);
+                songs.push(...albumSongs);
+            }
+            if (!songs.length) songs.push(album as Child);
 
             const shuffledSongs = shuffle ? shuffleArray([...songs]) : songs;
 

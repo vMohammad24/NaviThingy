@@ -58,7 +58,7 @@
     player.setPlaylist(playlist, index);
   }
 
-  function togglePlay(e: MouseEvent) {
+  function togglePlay(e: Event) {
     e.stopPropagation();
     if (isCurrentlyPlaying(song)) {
       player.pause();
@@ -117,64 +117,97 @@
     }
     contextMenu.show = false;
   }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      playSong(index);
+    }
+  }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="p-3 rounded transition-colors flex items-center gap-4 border-none cursor-pointer relative"
+<button
+  type="button"
+  class="group w-full text-left p-3.5 rounded-xl transition-all duration-300 flex items-center gap-4 border-none cursor-pointer relative
+    hover:bg-surface/40 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]
+    before:absolute before:inset-0 before:rounded-xl before:transition-opacity before:duration-300
+    before:opacity-0 group-hover:before:opacity-100 before:bg-gradient-to-r before:from-primary/5 before:to-transparent"
+  aria-label="Play {song.title} by {song.artist}"
   onclick={() => playSong(index)}
+  onkeydown={handleKeydown}
   onmouseenter={() => (isHovered = true)}
   onmouseleave={() => (isHovered = false)}
   oncontextmenu={handleContextMenu}
 >
-  <div
-    class="absolute inset-0 bg-black transition-opacity duration-200"
-    style:opacity={isHovered ? "0.3" : "0"}
-  ></div>
-  {#if isCurrentlyPlaying(song) || $player.currentTrack?.id === song.id}
-    <button
-      class="hover:text-primary transition-colors w-6 h-6 flex items-center justify-start"
-      onclick={togglePlay}
-    >
-      {#if isCurrentlyPlaying(song)}
-        <Pause size={24} />
-      {:else}
-        <Play size={24} />
-      {/if}
-    </button>
-  {:else if showTrackNumber}
-    <span class="w-6 text-right">{index + 1}</span>
-  {/if}
-  {#if song.coverArt}
-    <img
-      src={song.coverArt}
-      alt={song.title}
-      class="w-12 h-12 rounded object-cover"
-    />
-  {/if}
-  <div class="flex-grow flex flex-col relative z-10">
-    <div class="flex items-center gap-2">
-      <span class="font-medium">{song.title}</span>
-      {#if song.starred}
-        <Heart class="text-primary" size={16} />
+  <div class="relative z-10 flex items-center gap-4 w-full">
+    <div class="w-12 flex items-center justify-start">
+      {#if isCurrentlyPlaying(song) || $player.currentTrack?.id === song.id}
+        <div
+          role="button"
+          tabindex="0"
+          class="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-all duration-300
+            flex items-center justify-center group/btn hover:scale-110 active:scale-95"
+          onclick={togglePlay}
+          aria-label={isCurrentlyPlaying(song) ? "Pause" : "Play"}
+          onkeydown={(e: KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") togglePlay(e);
+          }}
+        >
+          {#if isCurrentlyPlaying(song)}
+            <Pause
+              size={18}
+              class="text-primary group-hover/btn:scale-90 transition-transform"
+            />
+          {:else}
+            <Play
+              size={18}
+              class="text-primary group-hover/btn:scale-110 transition-transform ml-0.5"
+            />
+          {/if}
+        </div>
+      {:else if showTrackNumber}
+        <span
+          class="w-8 text-center text-sm text-text-secondary/60 font-medium"
+        >
+          {index + 1}
+        </span>
       {/if}
     </div>
-    <div class="flex items-center text-sm text-text-secondary">
-      <span>{song.artist}</span>
-      {#if song.album}
-        <span class="mx-1">•</span>
-        <span>{song.album}</span>
-      {/if}
+
+    {#if song.coverArt}
+      <img
+        src={song.coverArt}
+        alt={song.title}
+        class="w-12 h-12 rounded-lg object-cover shadow-md transition-transform duration-300 group-hover:scale-105 group-hover:shadow-xl"
+      />
+    {/if}
+
+    <div class="flex-grow flex flex-col min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="font-medium truncate">{song.title}</span>
+        {#if song.starred}
+          <Heart class="text-primary animate-pulse-slow" size={14} />
+        {/if}
+      </div>
+      <div class="flex items-center text-sm text-text-secondary/70">
+        <span class="truncate">{song.artist}</span>
+        {#if song.album}
+          <span class="mx-1.5 text-[10px]">•</span>
+          <span class="truncate">{song.album}</span>
+        {/if}
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6 text-sm">
+      <span class="text-text-secondary/60 font-medium hidden sm:block"
+        >{song.bitRate ?? "unknown"} kbps</span
+      >
+      <span class="text-text-secondary/80 font-medium w-16 text-right"
+        >{formatDuration(song.duration!)}</span
+      >
     </div>
   </div>
-  <span class="text-text-secondary text-sm w-20 text-right relative z-10"
-    >{song.bitRate ?? "unknown"} kbps</span
-  >
-  <span class="text-text-secondary w-16 text-right relative z-10"
-    >{formatDuration(song.duration!)}</span
-  >
-</div>
+</button>
 
 <ContextMenu
   bind:show={contextMenu.show}
