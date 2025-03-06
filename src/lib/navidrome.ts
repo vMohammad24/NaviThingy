@@ -68,10 +68,9 @@ export class NavidromeClient {
     }) {
         return await this.api.updatePlaylist({
             playlistId: id,
-            ...params,
+            ...params
         });
     }
-
 
     async deletePlaylist(id: string) {
         return await this.api.deletePlaylist({ id });
@@ -328,6 +327,7 @@ export class NavidromeClient {
 
         return await this.getLyricsFromLRCLIB(song);
     }
+
 
     private parseSyncedLyrics(text: string): SyncedLyric[] {
         if (!text) return [];

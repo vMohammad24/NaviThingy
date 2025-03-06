@@ -150,11 +150,13 @@ class AudioPlayer {
 
                 this.applyReplayGain(track);
                 await this.audio.play();
+                this.state.isPlaying = true;
             } else {
                 const stream = await this.client.getSongStreamURL(track.id);
                 this.audio.src = stream;
                 this.applyReplayGain(track);
                 await this.audio.play();
+                this.state.isPlaying = true;
             }
 
             this.audio.currentTime = 0;
@@ -173,9 +175,7 @@ class AudioPlayer {
         } catch (error) {
             console.error('Playback failed:', error);
             toast.error(`Failed to play: ${track.title}`);
-            if (this.state.isPlaying) {
-                this.state.isPlaying = false;
-            }
+            this.state.isPlaying = false;
         }
     }
 
@@ -205,13 +205,48 @@ class AudioPlayer {
     }
 
     seek(time: number) {
-        if (this.audio.readyState < 2) {
-            this.audio.addEventListener('play', () => {
-                this.seek(time);
-            }, { once: true });
-        }
-        this.audio.currentTime = time;
-        this.saveProgress();
+        return new Promise<void>((resolve, reject) => {
+            const doSeek = () => {
+                this.audio.currentTime = time;
+                let retries = 0;
+                const maxRetries = 3;
+                const verifySeek = () => {
+                    if (Math.abs(this.audio.currentTime - time) > 0.5) {
+                        if (retries < maxRetries) {
+                            retries++;
+                            this.audio.currentTime = time;
+                            setTimeout(verifySeek, 100);
+                        } else {
+                            this.saveProgress();
+                            resolve();
+                        }
+                    } else {
+                        this.saveProgress();
+                        resolve();
+                    }
+                };
+
+                setTimeout(verifySeek, 100);
+            };
+
+            if (this.audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+                doSeek();
+            } else {
+                const loadedHandler = () => {
+                    doSeek();
+                    this.audio.removeEventListener('canplay', loadedHandler);
+                };
+
+                const errorHandler = (error: Event) => {
+                    this.audio.removeEventListener('error', errorHandler);
+                    this.audio.removeEventListener('canplay', loadedHandler);
+                    reject(new Error('Failed to seek: media loading failed'));
+                };
+
+                this.audio.addEventListener('canplay', loadedHandler);
+                this.audio.addEventListener('error', errorHandler);
+            }
+        });
     }
 
     setVolume(value: number) {
@@ -339,8 +374,10 @@ function createPlayerStore() {
     audioPlayer.onEnded(() => {
         update(state => {
             if (state.repeat === 'one') {
-                audioPlayer.playStream(state.currentTrack!);
-                return state;
+                audioPlayer.playStream(state.currentTrack!).catch(() => {
+                    update(s => ({ ...s, isPlaying: false }));
+                });
+                return { ...state, isPlaying: true };
             }
 
             let nextIndex = state.currentIndex + 1;
@@ -354,18 +391,20 @@ function createPlayerStore() {
 
             const nextTrack = state.playlist[nextIndex];
             audioPlayer.reset();
-            audioPlayer.playStream(nextTrack);
+            audioPlayer.playStream(nextTrack).catch(() => {
+                update(s => ({ ...s, isPlaying: false }));
+            });
             updateMediaMetadata({
                 track: nextTrack,
                 duration: audioPlayer.duration,
                 position: audioPlayer.progress
             });
 
-
             return {
                 ...state,
                 currentIndex: nextIndex,
-                currentTrack: nextTrack
+                currentTrack: nextTrack,
+                isPlaying: true
             };
         });
     });
@@ -578,10 +617,14 @@ function createPlayerStore() {
         stop: () => {
             update(state => ({ ...state, isPlaying: false }));
         },
-        seek: (time: number) => {
-            audioPlayer.seek(time);
+        seek: async (time: number) => {
+            try {
+                await audioPlayer.seek(time);
+            } catch (error) {
+                console.error('Seek failed:', error);
+                toast.error('Failed to seek to position');
+            }
         },
-
         setVolume: (volume: number) => {
             audioPlayer.setVolume(volume);
         },
