@@ -87,7 +87,7 @@
     <Maximize size={16} />
   </button>
   <button
-    class="h-full w-10 flex items-center justify-center text-text-secondary/70 hover:bg-red-500 hover:text-white transition-colors"
+    class="h-full w-10 flex items-center justify-center text-text-secondary/70 hover:bg-red-500 hover:text-text transition-colors"
     on:click={close}
     aria-label="Close"
   >
