@@ -1,4 +1,3 @@
-<!-- temp -->
 <script lang="ts">
   import { client } from "$lib/stores/client";
   import { Star } from "lucide-svelte";
@@ -22,12 +21,12 @@
 </script>
 
 <div
-  class="flex justify-center w-full px-4 py-2 text-left hover:bg-primary/10 transition-colors text-text group"
+  class="flex justify-center w-full px-2 sm:px-4 py-2 text-left hover:bg-primary/10 transition-colors text-text group"
 >
-  <div class="flex gap-0.5">
+  <div class="flex gap-1">
     {#each Array(5) as _, i}
       <button
-        class="text-primary hover:scale-110 transition-transform"
+        class="text-primary hover:scale-110 transition-transform p-1.5 sm:p-0.5 touch-manipulation"
         on:mouseenter={() => (hoverRating = i + 1)}
         on:mouseleave={() => (hoverRating = 0)}
         on:click={(e) => {
@@ -36,7 +35,7 @@
         }}
       >
         <Star
-          size={16}
+          size={20}
           class="transition-all duration-200"
           fill={(hoverRating ? i < hoverRating : i < rating)
             ? "currentColor"

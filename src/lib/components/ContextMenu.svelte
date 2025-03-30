@@ -1,14 +1,14 @@
 <script lang="ts">
+  import type { Icon } from "lucide-svelte";
   import { createEventDispatcher } from "svelte";
-  import type { Renderable } from "svelte-french-toast";
   import { fade } from "svelte/transition";
 
   type MenuItem = {
     label?: string;
     action?: () => void;
     type?: "separator";
-    icon?: Renderable;
-    item?: Renderable;
+    icon?: typeof Icon | string;
+    item?: typeof Icon | string;
     props?: Record<string, any>;
   };
 

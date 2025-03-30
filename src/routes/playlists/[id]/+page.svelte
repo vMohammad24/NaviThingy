@@ -171,11 +171,13 @@
   }
 </script>
 
-<div class="min-h-screen bg-background p-8">
+<div class="container mx-auto px-4 py-6">
   {#if playlist}
-    <div class="bg-surface rounded-lg shadow-md p-6 mb-6">
-      <div class="flex gap-6">
-        <div class="w-48 h-48 bg-background/50 rounded-lg overflow-hidden">
+    <div class="bg-surface rounded-lg shadow-md p-4 sm:p-6 mb-6">
+      <div class="flex flex-col md:flex-row gap-6">
+        <div
+          class="w-full md:w-48 h-auto md:h-48 bg-background/50 rounded-lg overflow-hidden"
+        >
           {#if playlist.entry && playlist.entry[0]?.coverArt}
             <img
               src={playlist.entry[0].coverArt}
@@ -183,24 +185,28 @@
               class="w-full h-full object-cover"
             />
           {:else}
-            <div class="w-full h-full flex items-center justify-center">
+            <div class="w-full h-48 flex items-center justify-center">
               <ListMusic size={64} class="text-text-secondary" />
             </div>
           {/if}
         </div>
 
         <div class="flex-1">
-          <div class="flex justify-between items-center mb-4">
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4"
+          >
             <div class="flex items-center gap-4">
-              <ListMusic class="text-primary" size={32} />
+              <ListMusic class="text-primary hidden sm:block" size={32} />
               {#if isEditing}
                 <input
                   type="text"
                   bind:value={editName}
-                  class="text-2xl font-bold p-2 border rounded bg-background text-text"
+                  class="text-xl sm:text-2xl font-bold p-2 border rounded bg-background text-text w-full sm:w-auto"
                 />
               {:else}
-                <h1 class="text-2xl font-bold text-text">{playlist.name}</h1>
+                <h1 class="text-xl sm:text-2xl font-bold text-text">
+                  {playlist.name}
+                </h1>
               {/if}
             </div>
             <div class="flex gap-2">
@@ -234,7 +240,7 @@
             </div>
           </div>
           <div class="mt-4 space-y-2 text-text-secondary">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <User size={16} />
               <span>Created by {playlist.owner}</span>
               <button
@@ -262,12 +268,12 @@
               <p class="italic">{playlist.comment}</p>
             {/if}
           </div>
-          <div class="flex items-center gap-4 mt-4">
+          <div class="flex flex-col sm:flex-row items-center gap-4 mt-4">
             <p class="text-text-secondary">{playlist.songCount || 0} songs</p>
-            <div class="flex gap-2">
+            <div class="flex gap-2 w-full sm:w-auto">
               {#if playlist.entry?.length}
                 <button
-                  class="bg-primary text-surface px-4 py-2 rounded hover:opacity-90"
+                  class="bg-primary text-surface px-4 py-2 rounded hover:opacity-90 w-full sm:w-auto"
                   on:click={() => playPlaylist()}
                   on:keydown={(e) => handleKeyDown(e, () => playPlaylist())}
                 >
@@ -275,7 +281,7 @@
                 </button>
               {/if}
               <button
-                class="bg-surface text-text-secondary px-4 py-2 rounded hover:text-primary hover:bg-surface/80 flex items-center gap-2"
+                class="bg-surface text-text-secondary px-4 py-2 rounded hover:text-primary hover:bg-surface/80 flex items-center gap-2 w-full sm:w-auto"
                 on:click={() => (showAddSong = true)}
                 on:keydown={(e) => handleKeyDown(e, () => (showAddSong = true))}
               >

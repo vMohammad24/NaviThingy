@@ -198,12 +198,6 @@
     }
   }
 
-  function seekToLyric(time: number) {
-    if ($player) {
-      player.seek(time);
-    }
-  }
-
   function scrollToCurrentLyric() {
     if (!lyricsContainer || !lyrics?.lines?.length) return;
     setTimeout(() => {
@@ -277,7 +271,6 @@
   function handleProgressMouseUp() {
     isDragging = false;
     if (duration) {
-      console.log(dragProgress, duration);
       player.seek(dragProgress);
     }
   }
@@ -426,7 +419,7 @@
                             class:text-primary={i === currentLyricIndex}
                             class:opacity-50={i !== currentLyricIndex}
                             bind:this={currentLyricElement}
-                            on:click={() => seekToLyric(line.time)}
+                            on:click={() => player.seek(line.time)}
                           >
                             {line.text}
                           </p>
@@ -439,7 +432,7 @@
                             }`}
                             class:text-primary={i === currentLyricIndex}
                             class:opacity-50={i !== currentLyricIndex}
-                            on:click={() => seekToLyric(line.time)}
+                            on:click={() => player.seek(line.time)}
                           >
                             {line.text}
                           </p>

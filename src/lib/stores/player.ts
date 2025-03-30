@@ -38,7 +38,6 @@ class AudioPlayer {
             }
         });
 
-
         this.audio.addEventListener('error', () => {
             console.error('Audio playback error:', this.audio.error);
             if (this.state?.isPlaying) {
@@ -46,13 +45,11 @@ class AudioPlayer {
             }
         });
 
-
         this.audio.addEventListener('playing', () => {
             if (this.state && !this.state.isPlaying) {
                 this.state.isPlaying = true;
             }
         });
-
 
         this.audio.addEventListener('pause', () => {
             if (this.state?.isPlaying) {
@@ -98,7 +95,7 @@ class AudioPlayer {
         if (!this.client || !this.state || !this.state.currentTrack) return;
         await this.client?.saveQueue({
             current: this.state?.currentTrack.id,
-            position: this.audio.currentTime,
+            position: Number((this.audio.currentTime * 1000).toFixed()),
             id: this.state.playlist.map(t => t.id).join(',')
         });
     }
@@ -122,15 +119,12 @@ class AudioPlayer {
 
         gain *= Math.pow(10, this.state.replayGain.preAmp / 20);
 
-
         if (rg.baseGain !== undefined) {
             gain *= Math.pow(10, rg.baseGain / 20);
         }
 
-
         const peak = rg.trackPeak ?? rg.albumPeak ?? 1.0;
         gain = Math.min(gain, 1.0 / peak);
-
 
         this.audio.volume = Math.min(1.0, this.volume * gain);
     }
@@ -196,6 +190,37 @@ class AudioPlayer {
                 await this.audio.play();
             } catch (error) {
                 console.error('Resume failed:', error);
+                toast.error('Failed to resume playback');
+                if (this.state?.isPlaying) {
+                    this.state.isPlaying = false;
+                }
+            }
+        } else {
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    const canPlayHandler = () => {
+                        this.audio.removeEventListener('canplay', canPlayHandler);
+                        this.audio.removeEventListener('error', errorHandler);
+                        resolve();
+                    };
+
+                    const errorHandler = () => {
+                        this.audio.removeEventListener('canplay', canPlayHandler);
+                        this.audio.removeEventListener('error', errorHandler);
+                        reject(new Error('Failed to load audio'));
+                    };
+
+                    this.audio.addEventListener('canplay', canPlayHandler);
+                    this.audio.addEventListener('error', errorHandler);
+
+                    if (this.audio.readyState >= 3) {
+                        resolve();
+                    }
+                });
+
+                await this.audio.play();
+            } catch (error) {
+                console.error('Resume failed while waiting for audio to load:', error);
                 toast.error('Failed to resume playback');
                 if (this.state?.isPlaying) {
                     this.state.isPlaying = false;
@@ -274,6 +299,45 @@ class AudioPlayer {
 
     setSource(src: string) {
         this.audio.src = src;
+        this.audio.load();
+    }
+
+    prepareTrack(track: Child) {
+        return new Promise<void>(async (resolve, reject) => {
+            if (!this.client || !this.state) {
+                reject(new Error('Client or state not available'));
+                return;
+            }
+
+            try {
+                const stream = await this.client.getSongStreamURL(track.id);
+                this.audio.src = stream;
+                this.applyReplayGain(track);
+                this.audio.load();
+
+                const loadHandler = () => {
+                    this.audio.removeEventListener('canplaythrough', loadHandler);
+                    this.audio.removeEventListener('error', errorHandler);
+                    resolve();
+                };
+
+                const errorHandler = () => {
+                    this.audio.removeEventListener('canplaythrough', loadHandler);
+                    this.audio.removeEventListener('error', errorHandler);
+                    reject(new Error('Failed to load audio'));
+                };
+
+                this.audio.addEventListener('canplaythrough', loadHandler);
+                this.audio.addEventListener('error', errorHandler);
+
+                if (this.audio.readyState >= 4) {
+                    resolve();
+                }
+            } catch (error) {
+                console.error('Failed to prepare track:', error);
+                reject(error);
+            }
+        });
     }
 }
 
@@ -336,10 +400,6 @@ function createPlayerStore() {
             const stream = await newClient.getSongStreamURL(currentTrack.id);
             audioPlayer.setSource(stream);
 
-            if (queue.position) {
-                audioPlayer.seek(queue.position);
-            }
-
             update(state => ({
                 ...state,
                 originalPlaylist: queueEntry,
@@ -348,6 +408,10 @@ function createPlayerStore() {
                 currentTrack: currentTrack,
                 isPlaying: false
             }));
+
+            if (queue.position) {
+                audioPlayer.seek(queue.position / 1000);
+            }
         }
     });
 
@@ -473,15 +537,23 @@ function createPlayerStore() {
                     currentTrack: nextTrack
                 };
 
+                audioPlayer.reset();
+
                 if (state.isPlaying) {
-                    audioPlayer.reset();
                     audioPlayer.playStream(nextTrack);
-                    updateMediaMetadata({
-                        track: nextTrack,
-                        duration: audioPlayer.duration,
-                        position: audioPlayer.progress
-                    });
+                } else if (client) {
+                    audioPlayer.prepareTrack(nextTrack)
+                        .catch(error => {
+                            console.error("Failed to prepare track:", error);
+                            toast.error(`Failed to load track: ${nextTrack.title}`);
+                        });
                 }
+
+                updateMediaMetadata({
+                    track: nextTrack,
+                    duration: audioPlayer.duration,
+                    position: audioPlayer.progress
+                });
 
                 return newState;
             });
@@ -506,15 +578,23 @@ function createPlayerStore() {
                     currentTrack: prevTrack
                 };
 
+                audioPlayer.reset();
+
                 if (state.isPlaying) {
-                    audioPlayer.reset();
                     audioPlayer.playStream(prevTrack);
-                    updateMediaMetadata({
-                        track: prevTrack,
-                        duration: audioPlayer.duration,
-                        position: audioPlayer.progress
-                    });
+                } else if (client) {
+                    audioPlayer.prepareTrack(prevTrack)
+                        .catch(error => {
+                            console.error("Failed to prepare track:", error);
+                            toast.error(`Failed to load track: ${prevTrack.title}`);
+                        });
                 }
+
+                updateMediaMetadata({
+                    track: prevTrack,
+                    duration: audioPlayer.duration,
+                    position: audioPlayer.progress
+                });
 
                 return newState;
             });
@@ -589,7 +669,6 @@ function createPlayerStore() {
                 const newPlaylist = [...state.playlist];
                 const newOriginalPlaylist = [...state.originalPlaylist];
 
-
                 newPlaylist.splice(state.currentIndex + 1, 0, track);
                 newOriginalPlaylist.splice(state.currentIndex + 1, 0, track);
 
@@ -600,7 +679,6 @@ function createPlayerStore() {
                 };
             });
         },
-
         toggleScrobble: () => {
             update(state => {
                 const newScrobble = !state.scrobble;
@@ -628,11 +706,9 @@ function createPlayerStore() {
         setVolume: (volume: number) => {
             audioPlayer.setVolume(volume);
         },
-
         getVolume: () => audioPlayer.volume,
         getProgress: () => audioPlayer.progress,
         getDuration: () => audioPlayer.duration,
-
         setReplayGainEnabled: (enabled: boolean) => {
             update(state => {
                 localStorage.setItem('replayGainEnabled', enabled.toString());
@@ -649,7 +725,6 @@ function createPlayerStore() {
                 return newState;
             });
         },
-
         setReplayGainMode: (mode: 'track' | 'album' | 'queue') => {
             update(state => {
                 localStorage.setItem('replayGainMode', mode);
@@ -666,7 +741,6 @@ function createPlayerStore() {
                 return newState;
             });
         },
-
         setReplayGainPreAmp: (preAmp: number) => {
             update(state => {
                 localStorage.setItem('replayGainPreAmp', preAmp.toString());

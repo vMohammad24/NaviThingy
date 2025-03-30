@@ -17,9 +17,15 @@
     "core:window:allow-start-dragging",
     "core:window:allow-toggle-maximize",
     "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-hide",
     "updater:allow-check",
     "updater:allow-download",
     "updater:allow-download-and-install",
-    "updater:allow-install"
+    "updater:allow-install",
+    "window-state:default",
+    "autostart:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

@@ -30,7 +30,7 @@
   }
 </script>
 
-<div class="container mx-auto p-4">
+<div class="container mx-auto px-4 py-6">
   {#if loading}
     <div class="flex justify-center items-center h-64">
       <div
@@ -61,9 +61,9 @@
           </button>
         </div>
         <div class="mt-4">
-          <h1 class="text-3xl font-bold">{songData.song.title}</h1>
+          <h1 class="text-2xl sm:text-3xl font-bold">{songData.song.title}</h1>
           <a
-            class="text-text-secondary mt-2"
+            class="text-text-secondary mt-2 hover:text-primary"
             href={`/artists/${songData.song.artistId}`}
             >{songData.song.artist}</a
           >
@@ -71,8 +71,8 @@
         </div>
       </div>
 
-      <div class="md:w-2/3 bg-surface rounded-lg p-4">
-        <h2 class="text-xl font-bold mb-4">Songs</h2>
+      <div class="md:w-2/3 bg-surface rounded-lg p-4 mt-6 md:mt-0">
+        <h2 class="text-xl font-bold mb-4">Similar Songs</h2>
         <div class="divide-y divide-primary/20">
           {#each (songData.similarSongs || []).sort((a, b) => (a!.track ?? 0) - (b.track ?? 0)) as song, i}
             <Song

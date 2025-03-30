@@ -32,11 +32,20 @@
   }
 }
 
-body {
+html, body {
   background-color: var(--color-background);
   color: var(--color-text);
+  overflow-x: hidden; 
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  width: 100%;
 }
-
+@media (max-width: 768px) {
+  * {
+    max-width: 100%;
+  }
+}
 aside {
   view-transition-name: exclude;
 }

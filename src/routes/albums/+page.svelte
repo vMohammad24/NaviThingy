@@ -155,16 +155,20 @@
   });
 </script>
 
-<div class="container mx-auto p-4 space-y-6">
-  <div class="flex items-center gap-2 mb-6 w-full justify-between">
-    <div class="flex items-center gap-2 mb-6">
+<div class="container mx-auto px-4 py-6 space-y-6">
+  <div
+    class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 w-full justify-between"
+  >
+    <div class="flex items-center gap-2 mb-2 sm:mb-0">
       <Disc class="text-primary" size={32} />
       <h1 class="text-2xl font-bold">Albums</h1>
     </div>
-    <div class="flex flex-wrap gap-2 mb-4">
+    <div
+      class="flex flex-wrap gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0"
+    >
       {#each tabs as tab}
         <button
-          class="px-4 py-2 rounded-lg {activeTab === tab.id
+          class="px-3 py-2 rounded-lg whitespace-nowrap {activeTab === tab.id
             ? 'bg-primary text-text'
             : 'bg-surface hover:bg-surface-hover'}"
           on:click={() => {
@@ -185,15 +189,15 @@
       class="flex-1 px-4 py-2 rounded-lg bg-surface"
       bind:value={searchQuery}
     />
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <button
-        class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover"
+        class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
         on:click={() => handleSort("name")}
       >
         Name {sortBy === "name" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
       </button>
       <button
-        class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover"
+        class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
         on:click={() => handleSort("artist")}
       >
         Artist {sortBy === "artist"
@@ -203,7 +207,7 @@
           : ""}
       </button>
       <button
-        class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover"
+        class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
         on:click={() => handleSort("year")}
       >
         Year {sortBy === "year" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
@@ -223,7 +227,7 @@
     </div>
   {:else}
     <div
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
     >
       {#each filteredAlbums as album}
         <Album {album} />
@@ -233,15 +237,17 @@
     <div
       class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 bg-surface p-4 rounded-lg"
     >
-      <div class="flex items-center gap-4">
-        <span class="text-text-secondary">
+      <div
+        class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
+      >
+        <span class="text-text-secondary text-sm">
           Showing {currentPage * pageSize + 1} - {Math.min(
             (currentPage + 1) * pageSize,
             totalAlbums
           )} of {totalAlbums}
         </span>
         <select
-          class="bg-surface-hover rounded px-2 py-1"
+          class="bg-surface-hover rounded px-2 py-1 w-full sm:w-auto"
           bind:value={pageSize}
           on:change={() => changePageSize(pageSize)}
         >
@@ -252,16 +258,16 @@
         </select>
       </div>
 
-      <div class="flex gap-2">
+      <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
         <button
-          class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50"
+          class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50 w-full sm:w-auto"
           on:click={() => changePage(-1)}
           disabled={currentPage === 0}
         >
           Previous
         </button>
         <button
-          class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50"
+          class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50 w-full sm:w-auto"
           on:click={() => changePage(1)}
           disabled={albums.length < pageSize}
         >

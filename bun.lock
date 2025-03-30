@@ -10,7 +10,7 @@
         "@tauri-apps/plugin-updater": "~2",
         "@vmohammad/subsonic-api": "3.1.5",
         "lucide-svelte": "latest",
-        "svelte-french-toast": "latest",
+        "svelte-french-toast": "1.2.0",
         "uuid": "latest",
       },
       "devDependencies": {

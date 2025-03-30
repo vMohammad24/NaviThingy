@@ -8,7 +8,6 @@ export class NavidromeClient {
         password: string;
     }
     constructor(server: NavidromeServer) {
-        console.log('Creating client')
         this.auth = {
             username: server.username,
             password: server.password
@@ -16,7 +15,7 @@ export class NavidromeClient {
         this.api = new SubsonicAPI({
             url: server.url,
             auth: this.auth,
-            client: 'NaviThingy',
+            client: `NaviThingy`,
             fetch: fetch
         });
     }

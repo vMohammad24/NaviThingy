@@ -2,6 +2,7 @@
   import Album from "$lib/components/Album.svelte";
   import HeroSong from "$lib/components/HeroSong.svelte";
   import { client } from "$lib/stores/client";
+  import { isMobile } from "$lib/stores/sidebarOpen";
   import type { Child } from "@vmohammad/subsonic-api";
   import { onMount } from "svelte";
   import { quintOut } from "svelte/easing";
@@ -48,7 +49,7 @@
   });
 </script>
 
-<div class="container mx-auto p-4 space-y-8">
+<div class="container mx-auto px-4 py-6 space-y-8">
   {#if loading}
     <div class="grid gap-8">
       <div class="h-48 bg-surface/30 animate-pulse rounded-2xl"></div>
@@ -56,7 +57,7 @@
         <div class="space-y-4">
           <div class="h-8 w-48 bg-surface/30 animate-pulse rounded-lg"></div>
           <div
-            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
           >
             {#each Array(6) as _}
               <div
@@ -70,7 +71,7 @@
   {:else if error}
     <div
       in:fade={{ duration: 300 }}
-      class="text-center p-12 rounded-2xl bg-surface/50 backdrop-blur"
+      class="text-center p-6 sm:p-12 rounded-2xl bg-surface/50 backdrop-blur"
     >
       <p class="text-text-secondary text-lg">{error}</p>
       <button
@@ -83,19 +84,11 @@
   {:else}
     <header
       in:fly={{ y: 20, duration: 500, delay: 0 }}
-      class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-surface p-8"
+      class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-surface p-4 sm:p-8"
     >
-      <h1 class="text-4xl font-bold mb-2">Welcome Back {username}</h1>
-      <!-- <div class="mt-6 flex gap-8 text-sm text-text-secondary">
-                <div>
-                    <div class="font-medium text-xl text-text-primary">Some stats title</div>
-                    <div>Some stats</div>
-                </div>
-                <div>
-                    <div class="font-medium text-xl text-text-primary">Some stats title</div>
-                    <div>Some stats</div>
-                </div>
-            </div> -->
+      <h1 class="text-xl sm:text-4xl font-bold mb-2">
+        Welcome Back, {username}
+      </h1>
     </header>
 
     <div in:fly={{ y: 20, duration: 500, delay: 100 }}>
@@ -111,7 +104,7 @@
         }}
       >
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-2xl font-bold">{section.title}</h2>
+          <h2 class="text-xl sm:text-2xl font-bold">{section.title}</h2>
           <a
             href="/albums/?activeTab={section.link}"
             class="text-sm text-text-secondary hover:text-primary transition-colors"
@@ -120,10 +113,12 @@
           </a>
         </div>
         <div
-          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
         >
-          {#each section.albums as album, albumIndex}
-            <Album {album} showMetadata />
+          {#each $isMobile ? section.albums.slice(0, 6) : section.albums as album, i}
+            {#if i < 6 || window.innerWidth >= 768}
+              <Album {album} showMetadata />
+            {/if}
           {/each}
         </div>
       </section>

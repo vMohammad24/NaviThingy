@@ -5,15 +5,16 @@
   import { player } from "$lib/stores/player";
   import { selectedServer } from "$lib/stores/selectedServer";
   import { servers } from "$lib/stores/servers";
+  import { isMobile } from "$lib/stores/sidebarOpen";
   import { theme } from "$lib/stores/theme";
   import type { Theme } from "$lib/types/theme";
   import { getTauriVersion, getVersion } from "@tauri-apps/api/app";
+  import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { relaunch } from "@tauri-apps/plugin-process";
   import { check } from "@tauri-apps/plugin-updater";
   import { X } from "lucide-svelte";
   import { onMount } from "svelte";
   import toast from "svelte-french-toast";
-
   $: currentTheme = theme.themes.find((t) => t.id === $theme);
   let customTheme = { ...currentTheme, name: "" };
   let showCustomThemeEditor = false;
@@ -21,6 +22,7 @@
   let fileInput: HTMLInputElement;
   let tauriVersion = "";
   let version = "";
+  let autostartEnabled = false;
   let contextMenu = {
     show: false,
     x: 0,
@@ -41,6 +43,7 @@
   onMount(async () => {
     tauriVersion = await getTauriVersion();
     version = await getVersion();
+    autostartEnabled = await isEnabled();
   });
 
   function handleContextMenu(event: MouseEvent, t: Theme) {
@@ -51,6 +54,18 @@
       y: event.clientY,
       theme: t,
     };
+  }
+
+  async function toggleAutoStart() {
+    if (autostartEnabled) {
+      await disable();
+      autostartEnabled = false;
+      return "Disabled autostart";
+    } else {
+      await enable();
+      autostartEnabled = true;
+      return "Enabled autostart";
+    }
   }
 
   function handleThemeClick(t: Theme) {
@@ -207,13 +222,41 @@
   }
 </script>
 
-<div class="max-w-2xl mx-auto">
-  <h1 class="text-3xl font-bold mb-8">Settings</h1>
+<div class="max-w-2xl mx-auto px-4">
+  <h1 class="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Settings</h1>
 
-  <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
+  <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
     <h2 class="text-xl font-semibold mb-4">Global Settings</h2>
     <div class="space-y-4">
-      <div class="flex items-center justify-between">
+      {#if !$isMobile}
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+        >
+          <div>
+            <h3 class="font-medium">Auto Start</h3>
+            <p class="text-sm text-text-secondary">
+              Start the application automatically when you log in
+            </p>
+          </div>
+          <button
+            class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {autostartEnabled
+              ? 'bg-primary text-background'
+              : 'bg-surface'}"
+            on:click={async () => {
+              toast.promise(toggleAutoStart(), {
+                loading: "Updating autostart...",
+                success: (msg) => msg,
+                error: (error) => error,
+              });
+            }}
+          >
+            {autostartEnabled ? "Enabled" : "Disabled"}
+          </button>
+        </div>
+      {/if}
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
         <div>
           <h3 class="font-medium">Scrobbling</h3>
           <p class="text-sm text-text-secondary">
@@ -222,7 +265,7 @@
           </p>
         </div>
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium transition-all {$player.scrobble
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {$player.scrobble
             ? 'bg-primary text-background'
             : 'bg-surface'}"
           on:click={() => player.toggleScrobble()}
@@ -231,7 +274,9 @@
         </button>
       </div>
 
-      <div class="flex items-center justify-between">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
         <div>
           <h3 class="font-medium">ReplayGain</h3>
           <p class="text-sm text-text-secondary">
@@ -239,7 +284,7 @@
           </p>
         </div>
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium transition-all {$player
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {$player
             .replayGain.enabled
             ? 'bg-primary text-background'
             : 'bg-surface'}"
@@ -289,20 +334,20 @@
     </div>
   </div>
 
-  <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
+  <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
     <h2 class="text-xl font-semibold mb-4">Server Settings</h2>
     <div class="space-y-4">
       {#each $servers as server}
         <div
-          class="flex items-center justify-between p-4 rounded-lg bg-background"
+          class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg bg-background gap-4"
         >
           <div>
             <h3 class="font-medium">{server.name}</h3>
-            <p class="text-sm text-text-secondary">{server.url}</p>
+            <p class="text-sm text-text-secondary break-all">{server.url}</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2 w-full sm:w-auto">
             <button
-              class="px-3 py-1 rounded-lg text-sm font-medium {$selectedServer?.id ===
+              class="px-3 py-1 rounded-lg text-sm font-medium w-full sm:w-auto {$selectedServer?.id ===
               server.id
                 ? 'bg-primary text-background'
                 : 'bg-surface'}"
@@ -312,7 +357,7 @@
               {$selectedServer?.id === server.id ? "Current" : "Switch"}
             </button>
             <button
-              class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20"
+              class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20 w-full sm:w-auto"
               on:click={() => handleServerRemove(server.id)}
             >
               Remove
@@ -330,18 +375,20 @@
     </div>
   </div>
 
-  <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
-    <div class="flex justify-between items-center mb-4">
+  <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
+    <div
+      class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3"
+    >
       <h2 class="text-xl font-semibold">Theme Settings</h2>
-      <div class="flex gap-2">
+      <div class="flex gap-2 w-full sm:w-auto">
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90"
+          class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 w-1/2 sm:w-auto"
           on:click={handleCreateTheme}
         >
           Create Theme
         </button>
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium bg-surface border border-primary hover:opacity-90"
+          class="px-3 py-1 rounded-lg text-sm font-medium bg-surface border border-primary hover:opacity-90 w-1/2 sm:w-auto"
           on:click={() => fileInput.click()}
         >
           Import File
@@ -358,7 +405,7 @@
     />
 
     <div class="mb-4">
-      <div class="flex gap-2">
+      <div class="flex flex-col sm:flex-row gap-2">
         <input
           type="url"
           bind:value={importUrl}
@@ -366,7 +413,7 @@
           class="flex-1 p-2 rounded-lg bg-background text-text"
         />
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90"
+          class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 w-full sm:w-auto"
           on:click={importThemeFromUrl}
         >
           Import
@@ -374,7 +421,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {#each theme.themes as t}
         <button
           class="p-4 rounded-lg relative group text-left"
@@ -387,7 +434,7 @@
           on:contextmenu={(e) => handleContextMenu(e, t)}
         >
           <div class="flex flex-col gap-2">
-            <span class="font-medium">{t.name}</span>
+            <span class="font-medium truncate">{t.name}</span>
             <div class="grid grid-cols-3 gap-1">
               {#each Object.entries(t.colors) as [key, color]}
                 <div
@@ -434,9 +481,9 @@
       maxWidth="max-w-4xl"
       onClose={() => (showCustomThemeEditor = false)}
     >
-      <div class="bg-surface p-6">
+      <div class="bg-surface p-4 sm:p-6">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-semibold">
+          <h3 class="text-xl sm:text-2xl font-semibold">
             {isCreating ? "Create Theme" : "Customize Theme"}
           </h3>
           <button
@@ -447,7 +494,7 @@
           </button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <div class="space-y-6">
             <div>
               <label for="theme-name" class="block text-sm font-medium mb-2"
@@ -570,17 +617,19 @@
     </Modal>
   </div>
 
-  <div class="rounded-lg p-6 shadow-lg bg-surface">
+  <div class="rounded-lg p-4 sm:p-6 shadow-lg bg-surface">
     <h2 class="text-xl font-semibold mb-4">Build Information</h2>
     <div class="space-y-4">
-      <div class="flex items-center justify-between">
+      <div
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+      >
         <div>
           <h3 class="font-medium">Version</h3>
           <p class="text-sm text-text-secondary">App: {version}</p>
           <p class="text-sm text-text-secondary">Tauri: {tauriVersion}</p>
         </div>
         <button
-          class="px-3 py-1 rounded-lg text-sm font-medium transition-all {checking
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {checking
             ? 'bg-surface'
             : updateAvailable
               ? 'bg-green-500 text-background'
@@ -592,7 +641,7 @@
             Starting Download...
           {:else if downloadProgress.status === "Progress"}
             Downloading... ({Math.round(
-              (downloadProgress.downloaded / downloadProgress.total) * 100
+              (downloadProgress.downloaded / downloadProgress.total) * 100,
             )}%)
           {:else if downloadProgress.status === "Finished"}
             Restarting...

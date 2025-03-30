@@ -106,6 +106,7 @@
           src={album.coverArt}
           alt={album.album}
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
           in:scale|local={{ duration: 300, easing: quintOut, start: 0.95 }}
         />
         <div
@@ -113,13 +114,13 @@
         >
           {#if isPlaying || $player.currentTrack?.id === album.id}
             <button
-              class="absolute bottom-4 right-4 p-4 rounded-full bg-primary text-background hover:scale-110 active:scale-95 transition-all shadow-lg"
+              class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 p-2 sm:p-4 rounded-full bg-primary text-background hover:scale-110 active:scale-95 transition-all shadow-lg"
               on:click={togglePlay}
             >
               {#if isPlaying}
-                <Pause size={24} />
+                <Pause class="w-5 h-5 sm:w-6 sm:h-6" />
               {:else}
-                <Play size={24} />
+                <Play class="w-5 h-5 sm:w-6 sm:h-6" />
               {/if}
             </button>
           {/if}
@@ -128,21 +129,21 @@
     {/if}
 
     {#if showMetadata}
-      <div class="p-6 space-y-2">
+      <div class="p-3 sm:p-4 md:p-6 space-y-1 sm:space-y-2">
         <h3
-          class="font-bold text-xl line-clamp-1 group-hover:text-primary transition-colors"
+          class="font-bold text-base sm:text-lg md:text-xl line-clamp-1 group-hover:text-primary transition-colors"
         >
           {album.album}
         </h3>
         <div class="flex items-center justify-between">
           <p
-            class="text-text-secondary group-hover:text-text-primary transition-colors"
+            class="text-sm sm:text-base text-text-secondary group-hover:text-text-primary transition-colors line-clamp-1"
           >
             {album.artist}
           </p>
           {#if album.year}
             <span
-              class="text-sm px-2 py-1 rounded-full bg-surface/50 text-text-secondary"
+              class="text-xs sm:text-sm px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-surface/50 text-text-secondary"
             >
               {album.year}
             </span>
@@ -150,7 +151,7 @@
         </div>
         {#if isPlaying}
           <div
-            class="h-1 w-full bg-surface/30 rounded-full overflow-hidden mt-4"
+            class="h-1 w-full bg-surface/30 rounded-full overflow-hidden mt-2 sm:mt-4"
           >
             <div
               class="h-full bg-primary rounded-full w-1/2 animate-progress"

@@ -60,13 +60,15 @@
 </script>
 
 <div class="container mx-auto p-4 space-y-6">
-  <div class="flex items-center gap-2 mb-6 w-full justify-between">
+  <div
+    class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 w-full justify-between"
+  >
     <div class="flex items-center gap-2">
       <ListMusic class="text-primary" size={32} />
       <h1 class="text-2xl font-bold">Playlists</h1>
     </div>
     <button
-      class="bg-primary text-surface px-4 py-2 rounded-lg hover:opacity-90"
+      class="bg-primary text-surface px-4 py-2 rounded-lg hover:opacity-90 w-full sm:w-auto"
       on:click={() => (showCreateDialog = true)}
     >
       Create Playlist
@@ -77,7 +79,7 @@
     <input
       type="text"
       placeholder="Search playlists..."
-      class="flex-1 px-4 py-2 rounded-lg bg-surface"
+      class="flex-1 px-4 py-2 rounded-lg bg-surface w-full"
       bind:value={searchQuery}
     />
   </div>
@@ -94,7 +96,7 @@
     </div>
   {:else}
     <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
     >
       {#each filteredPlaylists as playlist}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -118,7 +120,9 @@
           </div>
           <div class="p-4">
             <div class="flex items-center justify-between mb-1">
-              <h3 class="font-semibold text-lg text-text">{playlist.name}</h3>
+              <h3 class="font-semibold text-lg text-text truncate">
+                {playlist.name}
+              </h3>
               {#if playlist.public !== undefined}
                 {#if playlist.public}
                   <Unlock size={16} class="text-text-secondary" />
@@ -128,15 +132,14 @@
               {/if}
             </div>
             <p class="text-text-secondary text-sm space-y-1">
-              <span class="block"
+              <span class="block truncate"
                 >{playlist.songCount || 0} songs • By {playlist.owner}</span
               >
               {#if playlist.changed}
-                <span class="block">Updated {formatDate(playlist.changed)}</span
-                >
+                <span class="block">{formatDate(playlist.changed)}</span>
               {/if}
               {#if playlist.comment}
-                <span class="block italic">{playlist.comment}</span>
+                <span class="block italic truncate">{playlist.comment}</span>
               {/if}
             </p>
           </div>
@@ -148,9 +151,9 @@
 
 {#if showCreateDialog}
   <div
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
   >
-    <div class="bg-surface p-6 rounded-lg w-96 shadow-xl">
+    <div class="bg-surface p-6 rounded-lg w-full max-w-sm shadow-xl">
       <h2 class="text-xl font-bold mb-4 text-text">Create New Playlist</h2>
       <input
         type="text"

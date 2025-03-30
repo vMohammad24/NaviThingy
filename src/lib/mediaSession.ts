@@ -21,13 +21,12 @@ export function updateMediaMetadata({
     position: number;
 }) {
     if (!('mediaSession' in navigator)) return;
-
     navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist,
         album: track.album,
         artwork: [
-            { src: track.coverArt!, sizes: '512x512', type: 'image/jpeg' }
+            { src: track.coverArt! },
         ]
     });
 

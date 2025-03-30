@@ -9,11 +9,12 @@ This project is still in development. Please report any issues you encounter.
 ## Features
 
 - Stream music from your Navidrome server
-- Cross-platform support (Desktop)
+- Cross-platform support with support for Windows, Linux, MacOS and Android
 - Beautiful UI with themes
 - Quick search functionality for artists, albums and songs (Ctrl+K)
 - Synced lyrics support via LRCLIB/Embeded lyrics
 - Multiple theme options (Catppuccin variants included by default)
+- Support for multiple Navidrome servers
 - Responsive design
 
 ## Installation

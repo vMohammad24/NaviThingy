@@ -51,7 +51,7 @@
   });
 </script>
 
-<div class="container mx-auto p-4">
+<div class="container mx-auto px-4 py-6">
   {#if loading}
     <div class="flex justify-center items-center h-64">
       <div
@@ -69,12 +69,12 @@
           <img
             src={artist.artist.artistImageUrl}
             alt={artist.artist.name}
-            class="rounded-lg w-full shadow-lg sticky top-4"
+            class="rounded-lg w-full shadow-lg md:sticky md:top-4"
           />
         {/if}
         <div class="mt-4">
           <h1 class="text-3xl font-bold">{artist.artist.name}</h1>
-          <div class="flex items-center mt-2">
+          <div class="flex flex-wrap items-center mt-2 gap-2">
             <button
               on:click={playArtist}
               class="bg-primary text-text py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-opacity-80 transition-colors"
@@ -83,26 +83,23 @@
               Play Artist
             </button>
             {#if artist.artist.albumCount}
-              <p class="text-text-secondary ml-4">
+              <p class="text-text-secondary">
                 {artist.artist.albumCount} albums
               </p>
             {/if}
           </div>
         </div>
-        {#if artist.artist.albumCount}
-          <p class="text-text-secondary mt-2">
-            {artist.artist.albumCount} albums
-          </p>
-        {/if}
         {#if artist.artistInfo.biography}
           <div class="mt-4">
-            <h2 class="text-xl font-bold">Biography</h2>
-            {@html artist.artistInfo.biography}
+            <h2 class="text-xl font-bold mb-2">Biography</h2>
+            <div class="prose prose-sm prose-invert max-w-none">
+              {@html artist.artistInfo.biography}
+            </div>
           </div>
         {/if}
       </div>
 
-      <div class="md:w-2/3 bg-surface rounded-lg p-4">
+      <div class="md:w-2/3 bg-surface rounded-lg p-4 mt-6 md:mt-0">
         <h2 class="text-xl font-bold mb-4">Albums</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {#each artist.artist.album?.reverse() || [] as album}
