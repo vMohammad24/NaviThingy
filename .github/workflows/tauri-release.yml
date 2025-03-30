@@ -24,8 +24,8 @@ jobs:
             args: ""
           - platform: "windows-latest"
             args: ""
-          - platform: "android"
-            args: ""
+          # - platform: "android"
+          #   args: ""
 
     runs-on: ${{ matrix.platform }}
     steps:
