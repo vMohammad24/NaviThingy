@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { setupMediaSession } from "$lib/mediaSession";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
@@ -45,67 +44,6 @@
   let progressInterval: number;
   let isDragging = false;
   let dragProgress = 0;
-
-  if (browser) {
-    addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && isFullscreen) {
-        toggleFullscreen();
-      }
-      if (document.activeElement instanceof HTMLInputElement) return;
-      if (e.key === " ") {
-        e.preventDefault();
-        player.togglePlay();
-      }
-      if (e.key === "F11" || (e.key === "f" && e.ctrlKey)) {
-        e.preventDefault();
-        toggleFullscreen();
-      }
-
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        player.next();
-      }
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        player.previous();
-      }
-
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        updateVolume(volume + 0.05);
-        showVolume = true;
-        resetVolumeTimeout();
-      }
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        updateVolume(volume - 0.05);
-        showVolume = true;
-        resetVolumeTimeout();
-      }
-
-      if (e.key === "m") {
-        e.preventDefault();
-        toggleMute();
-      }
-
-      if (e.key === "r") {
-        e.preventDefault();
-        player.toggleRepeat();
-      }
-
-      if (e.key === "s") {
-        e.preventDefault();
-        player.toggleShuffle();
-      }
-
-      if (e.key === "q") {
-        e.preventDefault();
-        queueActions.toggle();
-      }
-    });
-  }
 
   $: if ($player.currentTrack && $client && $player.isPlaying) {
     if (currentTrackId !== $player.currentTrack.id) {
@@ -268,6 +206,65 @@
     progress = dragProgress;
   }
 
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape" && isFullscreen) {
+      toggleFullscreen();
+    }
+    if (document.activeElement instanceof HTMLInputElement) return;
+    if (e.key === " ") {
+      e.preventDefault();
+      player.togglePlay();
+    }
+    if (e.key === "F11" || (e.key === "f" && e.ctrlKey)) {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      player.next();
+    }
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      player.previous();
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      updateVolume(volume + 0.05);
+      showVolume = true;
+      resetVolumeTimeout();
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      updateVolume(volume - 0.05);
+      showVolume = true;
+      resetVolumeTimeout();
+    }
+
+    if (e.key === "m") {
+      e.preventDefault();
+      toggleMute();
+    }
+
+    if (e.key === "r") {
+      e.preventDefault();
+      player.toggleRepeat();
+    }
+
+    if (e.key === "s") {
+      e.preventDefault();
+      player.toggleShuffle();
+    }
+
+    if (e.key === "q") {
+      e.preventDefault();
+      queueActions.toggle();
+    }
+  }
+
   function handleProgressMouseUp() {
     isDragging = false;
     if (duration) {
@@ -291,6 +288,8 @@
     }
   }
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 {#if $player.currentTrack}
   {#if isFullscreen}
