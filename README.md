@@ -1,21 +1,22 @@
 # NaviThingy
 
-A Navidrome client built with Tauri and Svelte.
+A modern, feature-rich Navidrome client built with Tauri and Svelte.
 
 ## NOTE
 
-This project is still in development. Please report any issues you encounter.
+This project is still in development. Please report any issues you encounter on the GitHub issues page.
 
 ## Features
 
 - Stream music from your Navidrome server
-- Cross-platform support with support for Windows, Linux, MacOS and Android
-- Beautiful UI with themes
-- Quick search functionality for artists, albums and songs (Ctrl+K)
-- Synced lyrics support via LRCLIB/Embeded lyrics
+- Cross-platform support for Windows, Linux, MacOS, and Android
+- Beautiful UI with customizable themes
+- Quick search functionality for artists, albums, and songs (Ctrl+K)
+- Synced lyrics support via LRCLIB/Embedded lyrics
 - Multiple theme options (Catppuccin variants included by default)
 - Support for multiple Navidrome servers
-- Responsive design
+- Responsive design for all screen sizes
+- Two playback engines: WebAudio for browser-based playback and MPV for advanced features like gapless playback and hardware decoding
 
 ## Installation
 
@@ -24,11 +25,17 @@ This project is still in development. Please report any issues you encounter.
 
 ### Desktop:
 Download the latest release from the [releases page](https://github.com/vMohammad24/NaviThingy/releases)
-### Android
-For android you're gonna have to build it yourself for now. Follow the instructions below
 
+### Android:
+For Android, you'll need to build it yourself for now. Refer to the [Building from source](#building-from-source) section below for detailed instructions.
+
+## Themes
+
+Additional themes for NaviThingy can be found at:
+[ThingyThing Themes Repository](https://github.com/wont-stream/ThingyThing/tree/main/themes)
 
 ## Building from source
+
 1. Install the latest version of [Android Studio](https://developer.android.com/studio) and [Android SDK](https://developer.android.com/studio/install).
 2. Install the latest version of [Rust](https://www.rust-lang.org/tools/install) and [Tauri](https://tauri.app/v1/guides/getting-started/prerequisites/).
 3. Install the latest version of [Node.js](https://nodejs.org/en/download/) and [bun](https://bun.sh/docs/installation).
@@ -36,15 +43,19 @@ For android you're gonna have to build it yourself for now. Follow the instructi
 ```bash
 git clone https://github.com/vMohammad24/NaviThingy.git
 ```
-4. Navigate to the project directory:
+5. Navigate to the project directory:
 ```bash
 cd NaviThingy
 ```
-5. Install the dependencies:
+6. Install the dependencies:
 ```bash
 bun install
 ```
-6. Build the project:
+7. Build the project:
 ```bash
 bun tauri build --target android-arm64
 ```
+
+## Contributing
+
+Contributions are welcome! Feel free to open a pull request or an issue.
