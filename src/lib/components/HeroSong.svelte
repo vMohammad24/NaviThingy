@@ -150,7 +150,7 @@
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               <div
-                class="transform transition-transform duration-500 ease-out group-hover:scale-110"
+                class="transform transition-transform duration-500 ease-out group-hover:scale-110 text-text group-hover:rotate-0"
               >
                 {#if isPlaying}
                   <Pause size={24} class="sm:w-7 sm:h-7" />

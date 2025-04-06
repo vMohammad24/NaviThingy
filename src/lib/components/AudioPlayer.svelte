@@ -6,6 +6,7 @@
   import { sidebarHidden } from "$lib/stores/sidebarOpen";
   import type { SyncedLyric } from "$lib/types/navidrome";
   import {
+    Heart,
     ListMusic,
     Maximize2,
     Pause,
@@ -23,6 +24,7 @@
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
   import Queue from "./Queue.svelte";
+  import Rating from "./Rating.svelte";
 
   let progress = 0;
   let duration = 0;
@@ -44,7 +46,7 @@
   let progressInterval: number;
   let isDragging = false;
   let dragProgress = 0;
-
+  let fetchedLyrics = false;
   $: if ($player.currentTrack && $client && $player.isPlaying) {
     if (currentTrackId !== $player.currentTrack.id) {
       currentTrackId = $player.currentTrack.id;
@@ -111,15 +113,18 @@
   async function toggleFullscreen() {
     isFullscreen = !isFullscreen;
     sidebarHidden.set(isFullscreen);
-    if (isFullscreen && $player.currentTrack) {
+    if (isFullscreen && $player.currentTrack && !fetchedLyrics) {
       if ($client) lyrics = await $client.getLyrics($player.currentTrack!);
       scrollToCurrentLyric();
+      fetchedLyrics = true;
     }
   }
 
   $: if ($player.currentTrack && isFullscreen) {
     (async () => {
-      lyrics = await $client?.getLyrics($player.currentTrack!);
+      if (!fetchedLyrics)
+        lyrics = await $client?.getLyrics($player.currentTrack!);
+      fetchedLyrics = true;
     })();
   }
 
@@ -287,6 +292,18 @@
       hoveredTime = percentage * duration;
     }
   }
+
+  function toggleFavorite() {
+    if (!$player.currentTrack || !$client) return;
+
+    if ($player.currentTrack.starred) {
+      $client.unstar($player.currentTrack.id, "track");
+      $player.currentTrack.starred = undefined;
+    } else {
+      $client.star($player.currentTrack.id, "track");
+      $player.currentTrack.starred = new Date();
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -372,11 +389,26 @@
               class="w-24 h-24 rounded-lg shadow-xl object-cover"
             />
             <div class="flex flex-col flex-1">
-              <a
-                class="text-2xl font-bold text-text-secondary hover:text-primary"
-                href="/songs/{$player.currentTrack.id}"
-                on:click={toggleFullscreen}>{$player.currentTrack.title}</a
-              >
+              <div class="flex items-center gap-2">
+                <a
+                  class="text-2xl font-bold text-text-secondary hover:text-primary"
+                  href="/songs/{$player.currentTrack.id}"
+                  on:click={toggleFullscreen}>{$player.currentTrack.title}</a
+                >
+                <button
+                  class="p-1 hover:scale-110 transition-transform text-primary"
+                  on:click={toggleFavorite}
+                  aria-label={$player.currentTrack.starred
+                    ? "Remove from favorites"
+                    : "Add to favorites"}
+                >
+                  {#if $player.currentTrack.starred}
+                    <Heart size={20} class="animate-pulse-slow" />
+                  {:else}
+                    <Heart size={20} class="opacity-60" />
+                  {/if}
+                </button>
+              </div>
               <a
                 class="text-xl text-text-secondary hover:text-primary"
                 href="/artists/{$player.currentTrack.artistId}"
@@ -389,6 +421,12 @@
                   on:click={toggleFullscreen}>{$player.currentTrack.album}</a
                 >
               {/if}
+            </div>
+            <div class="flex items-center">
+              <Rating
+                id={$player.currentTrack.id}
+                rating={$player.currentTrack.userRating ?? 0}
+              />
             </div>
           </div>
 
@@ -526,11 +564,26 @@
                 in:fade
               />
               <div class="min-w-0 flex flex-col">
-                <a
-                  class="font-medium truncate"
-                  href="/songs/{$player.currentTrack.id}"
-                  >{$player.currentTrack.title}</a
-                >
+                <div class="flex items-center gap-2">
+                  <a
+                    class="font-medium truncate"
+                    href="/songs/{$player.currentTrack.id}"
+                    >{$player.currentTrack.title}</a
+                  >
+                  <button
+                    class="p-1 hover:scale-110 transition-transform text-primary"
+                    on:click={toggleFavorite}
+                    aria-label={$player.currentTrack.starred
+                      ? "Remove from favorites"
+                      : "Add to favorites"}
+                  >
+                    {#if $player.currentTrack.starred}
+                      <Heart size={14} class="animate-pulse-slow" />
+                    {:else}
+                      <Heart size={14} class="opacity-60" />
+                    {/if}
+                  </button>
+                </div>
                 <a
                   class="text-sm text-text-secondary truncate"
                   href="/artists/{$player.currentTrack.artistId}"
@@ -541,6 +594,14 @@
           </div>
 
           <div class="flex items-center gap-6">
+            <div class="hidden sm:flex mr-2">
+              <Rating
+                id={$player.currentTrack.id}
+                rating={$player.currentTrack.userRating ?? 0}
+                compact={true}
+              />
+            </div>
+
             <button
               class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
                 $player.shuffle ? "text-primary" : ""
