@@ -578,9 +578,9 @@
                       : "Add to favorites"}
                   >
                     {#if $player.currentTrack.starred}
-                      <Heart size={14} class="animate-pulse-slow" />
+                      <Heart size={16} fill="red" class="animate-pulse-slow" />
                     {:else}
-                      <Heart size={14} class="opacity-60" />
+                      <Heart size={16} class="opacity-60" />
                     {/if}
                   </button>
                 </div>

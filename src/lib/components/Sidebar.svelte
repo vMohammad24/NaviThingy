@@ -116,7 +116,7 @@
       transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
       before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/[0.03] before:to-transparent before:rounded-r-3xl
       bg-gradient-to-br from-surface/95 via-surface/90 to-surface/80 backdrop-blur-2xl
-      border-r border-white/[0.02] shadow-[1px_0_30px_-8px_rgba(0,0,0,0.3)]"
+       border-white/[0.02] shadow-[1px_0_30px_-8px_rgba(0,0,0,0.3)]"
   >
     <div class="flex flex-col p-3 relative z-10 h-full">
       <div

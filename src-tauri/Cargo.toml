@@ -1,16 +1,12 @@
 [package]
 name = "navithingy"
-version = "0.7.0"
+version = "0.8.0"
 description = "A navidrome client for desktop made by vMohammad"
 authors = ["vMohammad"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "navithingy_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -19,30 +15,35 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["devtools", "tray-icon"] }
-tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tauri-plugin-opener = "2.2.6"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+uuid = { version = "1.16.0", features = ["v4"] }
+which = "7.0.2"
+tauri-plugin-os = "2.2.1"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+named_pipe = "0.4"
+winapi = { version = "0.3", features = ["processthreadsapi"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-autostart = "2"
-tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-window-state = "2"
+tauri-plugin-autostart = "2.3.0"
+tauri-plugin-single-instance = "2.2.3"
+tauri-plugin-updater = "2.7.0"
+tauri-plugin-window-state = "2.2.2"
 
 [profile.dev]
-incremental = true # Compile your binary in smaller steps.
-opt-level = 0 # No optimizations in dev builds.
-panic = "unwind" # Keep stack traces for debugging.
-debug = true # Include debug information.
-debug-assertions = true # Enable debug assertions.
-overflow-checks = true # Check for integer overflow.
-codegen-units = 16 # Use 16 threads for code generation.
-
+incremental = true
+opt-level = 0
+panic = "unwind"
+debug = true
+debug-assertions = true
+overflow-checks = true 
+codegen-units = 16
 
 [profile.release]
-codegen-units = 1 # Allows LLVM to perform better optimization.
-lto = true # Enables link-time-optimizations.
-opt-level = "z" # Optimize for size.
-panic = "abort" # Higher performance by disabling panic handlers.
-strip = true # Ensures debug symbols are removed.
+codegen-units = 1 
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true 

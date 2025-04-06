@@ -2,7 +2,7 @@
   import { download } from "$lib/client/util";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import Modal from "$lib/components/Modal.svelte";
-  import { player } from "$lib/stores/player";
+  import { mpvSettings, player } from "$lib/stores/player";
   import { selectedServer } from "$lib/stores/selectedServer";
   import { servers } from "$lib/stores/servers";
   import { isMobile } from "$lib/stores/sidebarOpen";
@@ -10,12 +10,14 @@
   import type { Theme } from "$lib/types/theme";
   import { getTauriVersion, getVersion } from "@tauri-apps/api/app";
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+  import { platform } from "@tauri-apps/plugin-os";
   import { relaunch } from "@tauri-apps/plugin-process";
   import { check } from "@tauri-apps/plugin-updater";
   import { X } from "lucide-svelte";
   import { onMount } from "svelte";
   import toast from "svelte-french-toast";
   $: currentTheme = theme.themes.find((t) => t.id === $theme);
+  $: os = platform();
   let customTheme = { ...currentTheme, name: "" };
   let showCustomThemeEditor = false;
   let importUrl = "";
@@ -29,7 +31,9 @@
     y: 0,
     theme: null as Theme | null,
   };
-
+  let mpvPathInput = $mpvSettings.customPath;
+  let mpvEnabled = $mpvSettings.enabled;
+  let mpvFileInput: HTMLInputElement;
   let isCreating = false;
   let checking = false;
   let updateAvailable = false;
@@ -220,6 +224,24 @@
       checkForUpdates();
     }
   }
+  function handleMpvFileSelect(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      mpvPathInput = file.name;
+      player.setMpvPath(mpvPathInput);
+      toast.success("MPV path updated");
+    }
+  }
+
+  function saveMpvPath() {
+    player.setMpvPath(mpvPathInput);
+    toast.success("MPV path saved");
+  }
+
+  function toggleMpv() {
+    mpvEnabled = !mpvEnabled;
+    player.setMpvEnabled(mpvEnabled);
+  }
 </script>
 
 <div class="max-w-2xl mx-auto px-4">
@@ -334,6 +356,166 @@
     </div>
   </div>
 
+  <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
+    <h2 class="text-xl font-semibold mb-4">Audio Player Settings</h2>
+    <div class="space-y-4">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
+        <div>
+          <h3 class="font-medium">MPV Player</h3>
+          <p class="text-sm text-text-secondary">
+            Use MPV as audio backend (may provide better performance and format
+            support) (EXPERIMENTAL)
+          </p>
+        </div>
+        <button
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {mpvEnabled
+            ? 'bg-primary text-background'
+            : 'bg-surface'}"
+          on:click={toggleMpv}
+        >
+          {mpvEnabled ? "Enabled" : "Disabled"}
+        </button>
+      </div>
+
+      {#if mpvEnabled}
+        <div class="space-y-2 p-4 bg-background/50 rounded-lg">
+          <p class="text-sm mb-2">
+            {#if os === "windows"}
+              Specify the path to mpv.exe if not in system PATH:
+            {:else if os === "macos"}
+              Specify the path to mpv if not in system PATH:
+            {:else}
+              Specify the path to mpv executable if not in system PATH:
+            {/if}
+          </p>
+
+          <div class="flex gap-2">
+            <input
+              type="text"
+              class="flex-1 p-2 rounded-lg bg-background text-text"
+              placeholder="Path to MPV executable"
+              bind:value={mpvPathInput}
+            />
+            <input
+              type="file"
+              class="hidden"
+              accept={os === "windows" ? ".exe" : ""}
+              bind:this={mpvFileInput}
+              on:change={handleMpvFileSelect}
+            />
+            <button
+              class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background"
+              on:click={() => mpvFileInput.click()}
+            >
+              Browse
+            </button>
+            <button
+              class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background"
+              on:click={saveMpvPath}
+            >
+              Save
+            </button>
+          </div>
+
+          <p class="text-xs text-text-secondary mt-2">
+            {#if os === "windows"}
+              If MPV is in your system PATH, you can leave this field empty.
+            {:else if os === "macos"}
+              On macOS, you can install MPV using Homebrew: <code
+                >brew install mpv</code
+              >
+            {:else}
+              On Linux, install MPV using your distribution's package manager.
+            {/if}
+          </p>
+
+          {#if $mpvSettings.initialized}
+            <p class="text-xs text-green-500 mt-1">
+              MPV successfully initialized
+            </p>
+          {:else if mpvEnabled}
+            <p class="text-xs text-yellow-500 mt-1">MPV not initialized yet</p>
+          {/if}
+
+          <div class="mt-4 pt-4 border-t border-surface">
+            <h3 class="font-medium mb-3">Advanced MPV Settings</h3>
+
+            <div class="space-y-4">
+              <div
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+              >
+                <div>
+                  <h4 class="text-sm font-medium">Precise Seeking</h4>
+                  <p class="text-xs text-text-secondary">
+                    Enable more precise seeking for better accuracy
+                  </p>
+                </div>
+                <button
+                  class="px-3 py-1 rounded-lg text-xs font-medium transition-all w-full sm:w-auto {$mpvSettings.preciseSeek
+                    ? 'bg-primary text-background'
+                    : 'bg-surface'}"
+                  on:click={() =>
+                    player.setPreciseSeek(!$mpvSettings.preciseSeek)}
+                >
+                  {$mpvSettings.preciseSeek ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              <div
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+              >
+                <div>
+                  <h4 class="text-sm font-medium">Native Playlist Support</h4>
+                  <p class="text-xs text-text-secondary">
+                    Use MPV's native playlist features for better performance
+                  </p>
+                </div>
+                <button
+                  class="px-3 py-1 rounded-lg text-xs font-medium transition-all w-full sm:w-auto {$mpvSettings.nativePlaylist
+                    ? 'bg-primary text-background'
+                    : 'bg-surface'}"
+                  on:click={() =>
+                    player.setMpvPlaylistOptions(!$mpvSettings.nativePlaylist)}
+                >
+                  {$mpvSettings.nativePlaylist ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div>
+                  <h4 class="text-sm font-medium">Cache Size (seconds)</h4>
+                  <p class="text-xs text-text-secondary">
+                    Amount of audio to buffer in advance (higher values reduce
+                    stuttering)
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max="60"
+                    step="1"
+                    class="flex-1"
+                    value={$mpvSettings.cacheSize}
+                    on:change={(e) => {
+                      const value = parseInt(e.currentTarget.value);
+                      localStorage.setItem("mpvCacheSize", value.toString());
+                      mpvSettings.update((s) => ({ ...s, cacheSize: value }));
+                    }}
+                  />
+                  <span class="text-sm w-12 text-right"
+                    >{$mpvSettings.cacheSize}s</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </div>
   <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
     <h2 class="text-xl font-semibold mb-4">Server Settings</h2>
     <div class="space-y-4">
@@ -627,6 +809,7 @@
           <h3 class="font-medium">Version</h3>
           <p class="text-sm text-text-secondary">App: {version}</p>
           <p class="text-sm text-text-secondary">Tauri: {tauriVersion}</p>
+          <p class="text-sm text-text-secondary">Platform: {os}</p>
         </div>
         <button
           class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {checking
