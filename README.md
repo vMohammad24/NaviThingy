@@ -34,10 +34,17 @@ For Android, you'll need to build it yourself for now. Refer to the [Building fr
 Additional themes for NaviThingy can be found at:
 [ThingyThing Themes Repository](https://github.com/wont-stream/ThingyThing/tree/main/themes)
 
+
+## TODO
+- [x] **Add MPV as a backend for playback**
+- [ ] **Add Discord Rich Presence support**
+- [ ] **Add support for smart playlists**
+- [ ] **Improve mobile support**
+- [ ] **Add screenshots to the README**
 ## Building from source
 
 1. Install the latest version of [Android Studio](https://developer.android.com/studio) and [Android SDK](https://developer.android.com/studio/install).
-2. Install the latest version of [Rust](https://www.rust-lang.org/tools/install) and [Tauri](https://tauri.app/v1/guides/getting-started/prerequisites/).
+2. Install the latest version of [Rust](https://www.rust-lang.org/tools/install).
 3. Install the latest version of [Node.js](https://nodejs.org/en/download/) and [bun](https://bun.sh/docs/installation).
 4. Clone the repository:
 ```bash
