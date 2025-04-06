@@ -46,11 +46,18 @@
   let progressInterval: number;
   let isDragging = false;
   let dragProgress = 0;
-  let fetchedLyrics = false;
+  let lastFetchedLyricsId: string | null = null;
+
   $: if ($player.currentTrack && $client && $player.isPlaying) {
     if (currentTrackId !== $player.currentTrack.id) {
       currentTrackId = $player.currentTrack.id;
       scrollToCurrentLyric();
+
+      if (isFullscreen && currentTrackId) {
+        (async () => {
+          lyrics = await $client?.getLyrics($player.currentTrack!);
+        })();
+      }
     }
   }
 
@@ -113,18 +120,24 @@
   async function toggleFullscreen() {
     isFullscreen = !isFullscreen;
     sidebarHidden.set(isFullscreen);
-    if (isFullscreen && $player.currentTrack && !fetchedLyrics) {
-      if ($client) lyrics = await $client.getLyrics($player.currentTrack!);
+    if (isFullscreen && $player.currentTrack) {
+      if ($client && currentTrackId && lastFetchedLyricsId !== currentTrackId) {
+        lyrics = await $client.getLyrics($player.currentTrack!);
+        lastFetchedLyricsId = currentTrackId;
+      }
       scrollToCurrentLyric();
-      fetchedLyrics = true;
     }
   }
 
-  $: if ($player.currentTrack && isFullscreen) {
+  $: if (
+    $player.currentTrack &&
+    isFullscreen &&
+    currentTrackId &&
+    lastFetchedLyricsId !== currentTrackId
+  ) {
     (async () => {
-      if (!fetchedLyrics)
-        lyrics = await $client?.getLyrics($player.currentTrack!);
-      fetchedLyrics = true;
+      lyrics = await $client?.getLyrics($player.currentTrack!);
+      lastFetchedLyricsId = currentTrackId;
     })();
   }
 
