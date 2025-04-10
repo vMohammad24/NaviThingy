@@ -281,6 +281,18 @@ export class NavidromeClient {
                     const title = song.title.split('(')[0].trim();
                     return await this.getLyricsFromLRCLIB({ ...song, title });
                 }
+                if (params.get('album_name')) {
+                    const album = params.delete('album_name')!;
+                    return await this.getLyricsFromLRCLIB({ ...song, album });
+                }
+                if (params.get('duration')) {
+                    const duration = params.delete('duration')!;
+                    return await this.getLyricsFromLRCLIB({ ...song, duration });
+                }
+                if (song.artist?.includes('&')) {
+                    const artist = song.artist.split('&')[0].trim();
+                    return await this.getLyricsFromLRCLIB({ ...song, artist });
+                }
                 return undefined;
             };
 
