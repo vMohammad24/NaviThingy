@@ -1,11 +1,10 @@
-# Maintainer: vmohammad <vmohammad@vmohammad.dev>
 pkgname=navithingy
 pkgrel=1
 pkgdesc="A Navidrome client built with Tauri and Svelte. (binary)"
 arch=('x86_64')
 url="https://github.com/vMohammad24/NaviThingy"
 license=('MIT')
-depends=('gtk3' 'webkit2gtk-4.1' 'glib2' 'cairo' 'gdk-pixbuf2' 'pango' 'libsoup' 'desktop-file-utils' 'hicolor-icon-theme' 'libappindicator-gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good', 'jq')
+depends=('gtk3' 'webkit2gtk-4.1' 'glib2' 'cairo' 'gdk-pixbuf2' 'pango' 'libsoup' 'desktop-file-utils' 'hicolor-icon-theme' 'libappindicator-gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good')
 provides=('navithingy')
 conflicts=('navithingy-git')
 makedepends=('curl' 'jq')
@@ -28,30 +27,42 @@ pkgver() {
   echo "$(_fetch_latest_json_content)" | jq -r '.version // "0.0.0.error"'
 }
 
-_source_json_content="$(_fetch_latest_json_content)"
-_source_url_x86_64=$(echo "${_source_json_content}" | jq -r '.platforms."linux-x86_64".url // "error"')
-_source_filename_x86_64=""
+_get_dynamic_source_url_x86_64() {
+  local url
+  url=$(echo "$(_fetch_latest_json_content)" | jq -r '.platforms."linux-x86_64".url // "error"')
+  if [ "$url" = "error" ] || [ "$url" = "null" ] || [ -z "$url" ]; then
+    echo "Error: Could not determine source URL for linux-x86_64 from ${_latest_json_url} via _get_dynamic_source_url_x86_64" >&2
+    echo "invalid_url_error"
+    return 1
+  fi
+  echo "$url"
+}
 
-if [ "${_source_url_x86_64}" = "error" ] || [ "${_source_url_x86_64}" = "null" ] || [ -z "${_source_url_x86_64}" ]; then
-  echo "Error: Could not determine source URL for linux-x86_64 from ${_latest_json_url}" >&2
-  _source_url_x86_64="invalid_url_due_to_fetch_error"
-  _source_filename_x86_64="error.deb"
-else
-  _source_filename_x86_64=$(basename "${_source_url_x86_64}")
-fi
+_get_dynamic_source_filename_x86_64() {
+  local url
+  url="$(_get_dynamic_source_url_x86_64)"
+  if [ "$url" = "invalid_url_error" ]; then
+    echo "error.deb"
+    return 1
+  fi
+  basename "$url"
+}
 
-source_x86_64=("${_source_filename_x86_64}::${_source_url_x86_64}")
-sha256sums_x86_64('SKIP')
+source_x86_64=("$(_get_dynamic_source_filename_x86_64)::$(_get_dynamic_source_url_x86_64)")
+sha256sums_x86_64=('SKIP')
 
 install=${pkgname}.install
 
 package() {
-  if [ ! -f "$srcdir/${_source_filename_x86_64}" ] || [ "${_source_filename_x86_64}" = "error.deb" ]; then
-    echo "Error: Source .deb file '$srcdir/${_source_filename_x86_64}' not found or indicates a fetch error." >&2
+  local deb_filename
+  deb_filename="$(_get_dynamic_source_filename_x86_64)"
+
+  if [ ! -f "$srcdir/${deb_filename}" ] || [ "${deb_filename}" = "error.deb" ]; then
+    echo "Error: Source .deb file '$srcdir/${deb_filename}' not found or indicates a fetch/determination error." >&2
     return 1
   fi
 
-  ar x "$srcdir/${_source_filename_x86_64}"
+  ar x "$srcdir/${deb_filename}"
 
   if [ -f data.tar.xz ]; then
     tar -xvf data.tar.xz -C "${pkgdir}"
