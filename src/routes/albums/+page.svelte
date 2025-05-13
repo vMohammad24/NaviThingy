@@ -71,6 +71,7 @@
     { id: "highest", label: "Highest Rated" },
     { id: "frequent", label: "Most Played" },
     { id: "recent", label: "Recently Played" },
+    { id: "random", label: "Random" },
   ];
 
   async function loadAlbums() {
@@ -104,7 +105,7 @@
       filteredAlbums = filteredAlbums.filter(
         (album) =>
           album.title?.toLowerCase().includes(query) ||
-          album.artist?.toLowerCase().includes(query)
+          album.artist?.toLowerCase().includes(query),
       );
     }
 
@@ -243,7 +244,7 @@
         <span class="text-text-secondary text-sm">
           Showing {currentPage * pageSize + 1} - {Math.min(
             (currentPage + 1) * pageSize,
-            totalAlbums
+            totalAlbums,
           )} of {totalAlbums}
         </span>
         <select
