@@ -158,6 +158,8 @@ class AudioPlayer {
     private mpvPlaylistLoaded = false;
     private lastMpvPlaylistPos = -1;
     private useNativeMpvPlaylist = true;
+    private timeUpdateHandler: (() => void) | null = null; // ADDED
+
     public isMpvEnabled(): boolean {
         return this.useMpv && this.mpvInitialized;
     }
@@ -580,6 +582,12 @@ class AudioPlayer {
                 }
             } else {
                 const stream = await this.client.getSongStreamURL(track.id);
+                const currentTrackForListeners = track;
+
+                if (this.timeUpdateHandler) {
+                    this.audio.removeEventListener('timeupdate', this.timeUpdateHandler);
+                    this.timeUpdateHandler = null;
+                }
 
                 if (this.preloadedAudio) {
                     const oldAudio = this.audio;
@@ -587,14 +595,14 @@ class AudioPlayer {
                     this.preloadedAudio = null;
                     oldAudio.src = '';
 
-                    this.applyReplayGain(track);
+                    this.applyReplayGain(currentTrackForListeners);
                     await this.audio.play();
-                    this.state.isPlaying = true;
+                    if (this.state) this.state.isPlaying = true;
                 } else {
                     this.audio.src = stream;
-                    this.applyReplayGain(track);
+                    this.applyReplayGain(currentTrackForListeners);
                     await this.audio.play();
-                    this.state.isPlaying = true;
+                    if (this.state) this.state.isPlaying = true;
                 }
 
                 this.audio.currentTime = 0;
@@ -602,18 +610,28 @@ class AudioPlayer {
 
                 this.audio.addEventListener('loadedmetadata', () => {
                     updateMediaMetadata({
-                        track,
-                        duration: this.audio.duration,
+                        track: currentTrackForListeners,
+                        duration: currentTrackForListeners.duration || this.audio.duration,
                         position: this.audio.currentTime
                     });
                 }, { once: true });
+
+                this.timeUpdateHandler = () => {
+                    this.progress = this.audio.currentTime;
+                    updateMediaMetadata({
+                        track: currentTrackForListeners,
+                        duration: currentTrackForListeners.duration || this.audio.duration,
+                        position: this.progress
+                    });
+                };
+                this.audio.addEventListener('timeupdate', this.timeUpdateHandler);
             }
 
             this.saveProgress();
         } catch (error) {
             console.error('Playback failed:', error);
             toast.error(`Failed to play: ${track.title}`);
-            this.state.isPlaying = false;
+            if (this.state) this.state.isPlaying = false;
         }
     }
 

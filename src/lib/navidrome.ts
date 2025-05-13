@@ -182,8 +182,13 @@ export class NavidromeClient {
     async getArtist(id: string) {
         const { artist } = await this.api.getArtist({ id });
         const { artistInfo } = await this.api.getArtistInfo({ id });
-        if (artist.album) {
-            artist.album = await this.sanitizeChildren(artist.album);
+        if (artist) {
+            if (artist.coverArt) {
+                artist.coverArt = await this.getCoverURL(artist.coverArt ?? id);
+            }
+            if (artist.album) {
+                artist.album = await this.sanitizeChildren(artist.album);
+            }
         }
 
         return { artist, artistInfo };

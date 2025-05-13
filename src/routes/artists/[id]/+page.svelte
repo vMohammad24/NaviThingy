@@ -30,7 +30,7 @@
               album: album.name,
               artist: artist.artist.name,
             }));
-          })
+          }),
         );
         const allSongs = songs.flat();
         player.setPlaylist(allSongs, 0, true);
@@ -65,9 +65,9 @@
   {:else}
     <div class="flex flex-col md:flex-row gap-8 mb-8">
       <div class="md:w-1/3">
-        {#if artist.artist.artistImageUrl}
+        {#if artist.artist.artistImageUrl || artist.artist.coverArt}
           <img
-            src={artist.artist.artistImageUrl}
+            src={artist.artist.artistImageUrl || artist.artist.coverArt}
             alt={artist.artist.name}
             class="rounded-lg w-full shadow-lg md:sticky md:top-4"
           />

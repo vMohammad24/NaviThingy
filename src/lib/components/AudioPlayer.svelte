@@ -48,16 +48,39 @@
   let dragProgress = 0;
   let lastFetchedLyricsId: string | null = null;
 
-  $: if ($player.currentTrack && $client && $player.isPlaying) {
-    if (currentTrackId !== $player.currentTrack.id) {
-      currentTrackId = $player.currentTrack.id;
-      scrollToCurrentLyric();
-
-      if (isFullscreen && currentTrackId) {
-        (async () => {
-          lyrics = await $client?.getLyrics($player.currentTrack!);
-        })();
+  $: {
+    if ($player.currentTrack) {
+      const newTrackId = $player.currentTrack.id;
+      if (currentTrackId !== newTrackId) {
+        currentTrackId = newTrackId;
+        lyrics = undefined;
+        currentLyricIndex = -1;
       }
+      if (
+        isFullscreen &&
+        $client &&
+        $player.currentTrack.id &&
+        $player.currentTrack.id !== lastFetchedLyricsId
+      ) {
+        (async () => {
+          lyrics = await $client.getLyrics($player.currentTrack!);
+          lastFetchedLyricsId = $player.currentTrack?.id || null;
+          currentLyricIndex = -1;
+          updateCurrentLyric();
+          scrollToCurrentLyric();
+        })();
+      } else if (
+        isFullscreen &&
+        lyrics &&
+        currentTrackId === lastFetchedLyricsId
+      ) {
+        scrollToCurrentLyric();
+      }
+    } else {
+      currentTrackId = null;
+      lyrics = undefined;
+      currentLyricIndex = -1;
+      lastFetchedLyricsId = null;
     }
   }
 
@@ -120,51 +143,44 @@
   async function toggleFullscreen() {
     isFullscreen = !isFullscreen;
     sidebarHidden.set(isFullscreen);
-    if (isFullscreen && $player.currentTrack) {
-      if ($client && currentTrackId && lastFetchedLyricsId !== currentTrackId) {
-        lyrics = await $client.getLyrics($player.currentTrack!);
-        lastFetchedLyricsId = currentTrackId;
-      }
+    if (
+      isFullscreen &&
+      lyrics &&
+      $player.currentTrack &&
+      $player.currentTrack.id === lastFetchedLyricsId
+    ) {
       scrollToCurrentLyric();
     }
-  }
-
-  $: if (
-    $player.currentTrack &&
-    isFullscreen &&
-    currentTrackId &&
-    lastFetchedLyricsId !== currentTrackId
-  ) {
-    (async () => {
-      lyrics = await $client?.getLyrics($player.currentTrack!);
-      lastFetchedLyricsId = currentTrackId;
-    })();
+    updateCurrentLyric();
   }
 
   function updateCurrentLyric() {
-    if (!lyrics?.synced) return;
+    if (!lyrics?.synced || !lyrics.lines.length) {
+      currentLyricIndex = -1;
+      return;
+    }
 
     const newIndex = lyrics.lines.findIndex((line, i) => {
       const nextTime = lyrics!.lines[i + 1]?.time ?? Infinity;
       return progress >= line.time && progress < nextTime;
     });
 
-    if (newIndex !== -1 && newIndex !== currentLyricIndex) {
+    if (newIndex !== currentLyricIndex) {
       currentLyricIndex = newIndex;
     }
   }
 
   function scrollToCurrentLyric() {
-    if (!lyricsContainer || !lyrics?.lines?.length) return;
+    if (
+      !lyricsContainer ||
+      !lyrics?.lines?.length ||
+      currentLyricIndex < 0 ||
+      !currentLyricElement
+    ) {
+      return;
+    }
     setTimeout(() => {
       try {
-        if (!currentLyricElement && currentLyricIndex >= 0) {
-          const elements = lyricsContainer.querySelectorAll("p");
-          currentLyricElement = elements[
-            currentLyricIndex
-          ] as HTMLParagraphElement;
-        }
-
         if (currentLyricElement) {
           const containerHeight = lyricsContainer.clientHeight;
           const lyricTop = currentLyricElement.offsetTop;
@@ -309,13 +325,28 @@
   function toggleFavorite() {
     if (!$player.currentTrack || !$client) return;
 
-    if ($player.currentTrack.starred) {
-      $client.unstar($player.currentTrack.id, "track");
-      $player.currentTrack.starred = undefined;
+    const trackId = $player.currentTrack.id;
+    const isCurrentlyStarred = !!$player.currentTrack.starred;
+
+    if (isCurrentlyStarred) {
+      $client.unstar(trackId, "track");
     } else {
-      $client.star($player.currentTrack.id, "track");
-      $player.currentTrack.starred = new Date();
+      $client.star(trackId, "track");
     }
+
+    // sometimes i hate svelte
+    player.update((p) => {
+      if (p.currentTrack && p.currentTrack.id === trackId) {
+        return {
+          ...p,
+          currentTrack: {
+            ...p.currentTrack,
+            starred: isCurrentlyStarred ? undefined : new Date(),
+          },
+        };
+      }
+      return p;
+    });
   }
 </script>
 
@@ -408,19 +439,23 @@
                   href="/songs/{$player.currentTrack.id}"
                   on:click={toggleFullscreen}>{$player.currentTrack.title}</a
                 >
-                <button
-                  class="p-1 hover:scale-110 transition-transform text-primary"
-                  on:click={toggleFavorite}
-                  aria-label={$player.currentTrack.starred
-                    ? "Remove from favorites"
-                    : "Add to favorites"}
-                >
-                  {#if $player.currentTrack.starred}
-                    <Heart size={20} class="animate-pulse-slow" />
-                  {:else}
-                    <Heart size={20} class="opacity-60" />
-                  {/if}
-                </button>
+                {#key $player.currentTrack.id}
+                  {#key $player.currentTrack.starred}
+                    <button
+                      class="p-1 hover:scale-110 transition-transform text-primary"
+                      on:click={toggleFavorite}
+                      aria-label={$player.currentTrack.starred
+                        ? "Remove from favorites"
+                        : "Add to favorites"}
+                    >
+                      {#if $player.currentTrack.starred}
+                        <Heart size={20} class="animate-pulse-slow" />
+                      {:else}
+                        <Heart size={20} class="opacity-60" />
+                      {/if}
+                    </button>
+                  {/key}
+                {/key}
               </div>
               <a
                 class="text-xl text-text-secondary hover:text-primary"
@@ -436,10 +471,12 @@
               {/if}
             </div>
             <div class="flex items-center">
-              <Rating
-                id={$player.currentTrack.id}
-                rating={$player.currentTrack.userRating ?? 0}
-              />
+              {#key $player.currentTrack.id}
+                <Rating
+                  id={$player.currentTrack.id}
+                  rating={$player.currentTrack.userRating ?? 0}
+                />
+              {/key}
             </div>
           </div>
 
@@ -583,19 +620,27 @@
                     href="/songs/{$player.currentTrack.id}"
                     >{$player.currentTrack.title}</a
                   >
-                  <button
-                    class="p-1 hover:scale-110 transition-transform text-primary"
-                    on:click={toggleFavorite}
-                    aria-label={$player.currentTrack.starred
-                      ? "Remove from favorites"
-                      : "Add to favorites"}
-                  >
-                    {#if $player.currentTrack.starred}
-                      <Heart size={16} fill="red" class="animate-pulse-slow" />
-                    {:else}
-                      <Heart size={16} class="opacity-60" />
-                    {/if}
-                  </button>
+                  {#key $player.currentTrack.id}
+                    {#key $player.currentTrack.starred}
+                      <button
+                        class="p-1 hover:scale-110 transition-transform text-primary"
+                        on:click={toggleFavorite}
+                        aria-label={$player.currentTrack.starred
+                          ? "Remove from favorites"
+                          : "Add to favorites"}
+                      >
+                        {#if $player.currentTrack.starred}
+                          <Heart
+                            size={16}
+                            fill="red"
+                            class="animate-pulse-slow"
+                          />
+                        {:else}
+                          <Heart size={16} class="opacity-60" />
+                        {/if}
+                      </button>
+                    {/key}
+                  {/key}
                 </div>
                 <a
                   class="text-sm text-text-secondary truncate"
@@ -608,11 +653,13 @@
 
           <div class="flex items-center gap-6">
             <div class="hidden sm:flex mr-2">
-              <Rating
-                id={$player.currentTrack.id}
-                rating={$player.currentTrack.userRating ?? 0}
-                compact={true}
-              />
+              {#key $player.currentTrack.id}
+                <Rating
+                  id={$player.currentTrack.id}
+                  rating={$player.currentTrack.userRating ?? 0}
+                  compact={true}
+                />
+              {/key}
             </div>
 
             <button
