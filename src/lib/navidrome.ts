@@ -103,12 +103,13 @@ export class NavidromeClient {
             album.song = [];
         }
         if (album.coverArt) {
-            album.coverArt = await this.getCoverURL(album.id);
+            album.coverArt = await this.getCoverURL(album.coverArt ?? id);
         }
         return album;
     }
 
     async getCoverURL(id: string, size = 1024) {
+        if (id.startsWith('http')) return id;
         return (await this.api.getURL("getCoverArt", { id, size })).toString();
     }
 
@@ -160,15 +161,13 @@ export class NavidromeClient {
         return queue;
     }
 
-    private async sanitizeChildren<T extends { coverArt?: string; id: string }>(children: T[]): Promise<T[]> {
+    private async sanitizeChildren<T extends { coverArt?: string; id?: string; album?: string; name?: string; }>(children: T[]): Promise<T[]> {
         return await Promise.all(children.map(async child => {
             if (child.coverArt && !child.coverArt.startsWith('http')) {
-                return {
-                    ...child,
-                    coverArt: await this.getCoverURL(child.id)
-                };
+                child.coverArt = await this.getCoverURL(child.coverArt ?? child.id);
             }
-            return child;
+            if (!child.album && child.name) child.album = child.name;
+            if (child) return child as any;
         }));
     }
 
@@ -191,13 +190,23 @@ export class NavidromeClient {
     }
 
     async getArtists() {
-        return (await this.api.getArtists()).artists;
+        let artists = (await this.api.getArtists()).artists;
+
+        if (artists?.index) {
+            artists.index = await Promise.all(artists.index.map(async (index) => {
+                if (index.artist) {
+                    index.artist = await this.sanitizeChildren(index.artist);
+                }
+                return index;
+            }));
+        }
+        return artists;
     }
 
     async getSong(id: string, withSimilar: boolean = false) {
         const { song } = await this.api.getSong({ id });
         if (song.coverArt) {
-            song.coverArt = (await this.getCoverURL(song.id)).toString();
+            song.coverArt = (await this.getCoverURL(song.coverArt ?? song.id)).toString();
         }
         let similarSongs: Child[] = [];
         if (withSimilar) {
@@ -262,60 +271,52 @@ export class NavidromeClient {
 
     private async getLyricsFromLRCLIB(song: Child): Promise<LyricsResult | undefined> {
         try {
-            const params = new URLSearchParams({
-                track_name: song.title || '',
-                artist_name: song.artist!
+            const variations = [
+                { title: song.title, artist: song.artist, album: song.album, duration: song.duration },
+                { title: song.title, artist: song.artist?.includes(',') ? song.artist.split(',')[0].trim() : song.artist, album: song.album, duration: song.duration },
+                { title: song.title?.includes('(') ? song.title.split('(')[0].trim() : song.title, artist: song.artist, album: song.album, duration: song.duration },
+                { title: song.title, artist: song.artist, album: undefined, duration: song.duration },
+                { title: song.title, artist: song.artist, album: song.album, duration: undefined },
+                { title: song.title, artist: song.artist?.includes('&') ? song.artist.split('&')[0].trim() : song.artist, album: song.album, duration: song.duration }
+            ];
+
+            const promises = variations.map(params => {
+                return async () => {
+                    const urlParams = new URLSearchParams({
+                        track_name: params.title || '',
+                        artist_name: params.artist || ''
+                    });
+
+                    if (params.album) urlParams.append('album_name', params.album);
+                    if (params.duration) urlParams.append('duration', Math.round(params.duration).toString());
+
+                    const response = await fetch(`https://lrclib.net/api/get?${urlParams}`);
+                    if (!response.ok) return undefined;
+
+                    const data: LRCLIBResponse = await response.json();
+
+                    if (data.syncedLyrics) {
+                        const syncedLyrics = this.parseSyncedLyrics(data.syncedLyrics);
+                        return {
+                            synced: true,
+                            plain: data.plainLyrics,
+                            lines: syncedLyrics
+                        };
+                    } else if (data.plainLyrics) {
+                        return {
+                            synced: false,
+                            plain: data.plainLyrics,
+                            lines: []
+                        };
+                    }
+                    return Promise.reject('No lyrics found');
+                };
             });
-
-            if (song.album) params.append('album_name', song.album);
-            if (song.duration) params.append('duration', Math.round(song.duration).toString());
-
-            const response = await fetch(`https://lrclib.net/api/get?${params}`);
-
-            if (!response.ok) {
-                if (song.artist?.includes(',')) {
-                    const artist = song.artist.split(',')[0].trim();
-                    return await this.getLyricsFromLRCLIB({ ...song, artist });
-                }
-                if (song.title?.includes('(')) {
-                    const title = song.title.split('(')[0].trim();
-                    return await this.getLyricsFromLRCLIB({ ...song, title });
-                }
-                if (params.get('album_name')) {
-                    const album = params.delete('album_name')!;
-                    return await this.getLyricsFromLRCLIB({ ...song, album });
-                }
-                if (params.get('duration')) {
-                    const duration = params.delete('duration')!;
-                    return await this.getLyricsFromLRCLIB({ ...song, duration });
-                }
-                if (song.artist?.includes('&')) {
-                    const artist = song.artist.split('&')[0].trim();
-                    return await this.getLyricsFromLRCLIB({ ...song, artist });
-                }
-                return undefined;
-            };
-
-            const data: LRCLIBResponse = await response.json();
-
-            if (data.syncedLyrics) {
-                const syncedLyrics = this.parseSyncedLyrics(data.syncedLyrics);
-                return {
-                    synced: true,
-                    plain: data.plainLyrics,
-                    lines: syncedLyrics
-                };
-            } else if (data.plainLyrics) {
-                return {
-                    synced: false,
-                    plain: data.plainLyrics,
-                    lines: []
-                };
-            }
+            return await Promise.race(promises.map(fn => fn()).filter(Boolean));
         } catch (error) {
             console.error('LRCLIB fetch failed:', error);
+            return undefined;
         }
-        return undefined;
     }
 
     async getLyrics(song: Child): Promise<LyricsResult | undefined> {

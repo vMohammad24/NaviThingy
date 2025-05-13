@@ -24,7 +24,7 @@
   function saveSettings() {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ sortBy, sortDirection })
+      JSON.stringify({ sortBy, sortDirection }),
     );
   }
 
@@ -67,7 +67,7 @@
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filteredArtists = filteredArtists.filter((artist) =>
-        artist.name.toLowerCase().includes(query)
+        artist.name.toLowerCase().includes(query),
       );
     }
 
@@ -154,9 +154,9 @@
           <div
             class="aspect-square mb-2 bg-surface-hover rounded-lg overflow-hidden"
           >
-            {#if artist.artistImageUrl}
+            {#if artist.artistImageUrl || artist.coverArt}
               <img
-                src={artist.artistImageUrl}
+                src={artist.artistImageUrl || artist.coverArt}
                 alt={artist.name}
                 class="w-full h-full object-cover"
               />
