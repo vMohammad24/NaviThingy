@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Publish AUR package
+      - name: Publish AUR package (git)
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
         with:
           pkgname: navithingy-git

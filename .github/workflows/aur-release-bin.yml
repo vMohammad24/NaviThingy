@@ -1,0 +1,38 @@
+name: aur-publish-bin
+
+on:
+  workflow_run:
+    workflows: ["publish"] 
+    types:
+      - completed
+
+jobs:
+  aur-publish-bin:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get package version
+        id: get_version
+        run: |
+          VERSION=$(curl -sL https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json | jq -r '.version')
+          if [ -z "$VERSION" ] || [ "$VERSION" == "null" ]; then
+            echo "Failed to get version from latest.json"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Publish AUR package (bin)
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: navithingy
+          pkgbuild: ./PKGBUILD-bin
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package to v${{ steps.get_version.outputs.version }}
+          ssh_keyscan_types: ed25519
+          assets: navithingy.install

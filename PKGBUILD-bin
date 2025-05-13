@@ -1,0 +1,64 @@
+# Maintainer: vmohammad <vmohammad@vmohammad.dev>
+pkgname=navithingy
+pkgrel=1
+pkgdesc="A Navidrome client built with Tauri and Svelte. (binary)"
+arch=('x86_64')
+url="https://github.com/vMohammad24/NaviThingy"
+license=('MIT')
+depends=('gtk3' 'webkit2gtk-4.1' 'glib2' 'cairo' 'gdk-pixbuf2' 'pango' 'libsoup' 'desktop-file-utils' 'hicolor-icon-theme' 'libappindicator-gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good')
+provides=('navithingy')
+conflicts=('navithingy-git')
+makedepends=('curl' 'jq')
+
+_latest_json_url="https://github.com/vMohammad24/NaviThingy/releases/latest/download/latest.json"
+
+_CACHED_LATEST_JSON_CONTENT=""
+_fetch_latest_json_content() {
+  if [ -z "$_CACHED_LATEST_JSON_CONTENT" ]; then
+    _CACHED_LATEST_JSON_CONTENT=$(curl -sL "${_latest_json_url}")
+    if [ -z "$_CACHED_LATEST_JSON_CONTENT" ]; then
+      echo "Error: Failed to fetch or got empty content from ${_latest_json_url}" >&2
+      _CACHED_LATEST_JSON_CONTENT="{}"
+    fi
+  fi
+  echo "$_CACHED_LATEST_JSON_CONTENT"
+}
+
+pkgver() {
+  echo "$(_fetch_latest_json_content)" | jq -r '.version // "0.0.0.error"'
+}
+
+_source_json_content="$(_fetch_latest_json_content)"
+_source_url_x86_64=$(echo "${_source_json_content}" | jq -r '.platforms."linux-x86_64".url // "error"')
+_source_filename_x86_64=""
+
+if [ "${_source_url_x86_64}" = "error" ] || [ "${_source_url_x86_64}" = "null" ] || [ -z "${_source_url_x86_64}" ]; then
+  echo "Error: Could not determine source URL for linux-x86_64 from ${_latest_json_url}" >&2
+  _source_url_x86_64="invalid_url_due_to_fetch_error"
+  _source_filename_x86_64="error.deb"
+else
+  _source_filename_x86_64=$(basename "${_source_url_x86_64}")
+fi
+
+source_x86_64=("${_source_filename_x86_64}::${_source_url_x86_64}")
+sha256sums_x86_64('SKIP')
+
+install=${pkgname}.install
+
+package() {
+  if [ ! -f "$srcdir/${_source_filename_x86_64}" ] || [ "${_source_filename_x86_64}" = "error.deb" ]; then
+    echo "Error: Source .deb file '$srcdir/${_source_filename_x86_64}' not found or indicates a fetch error." >&2
+    return 1
+  fi
+
+  ar x "$srcdir/${_source_filename_x86_64}"
+
+  if [ -f data.tar.xz ]; then
+    tar -xvf data.tar.xz -C "${pkgdir}"
+  elif [ -f data.tar.gz ]; then
+    tar -xvf data.tar.gz -C "${pkgdir}"
+  else
+    echo "Error: data.tar.xz or data.tar.gz not found after extracting .deb." >&2
+    return 1
+  fi
+}
