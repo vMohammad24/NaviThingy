@@ -41,19 +41,29 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Check for changes
+        id: changed_src_files
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            src/**
+            src-tauri/**
+
       - name: install Rust stable
+        if: steps.changed_src_files.outputs.any_changed == 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
+        if: steps.changed_src_files.outputs.any_changed == 'true'
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
 
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        if: matrix.platform == 'ubuntu-22.04' && steps.changed_src_files.outputs.any_changed == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -61,9 +71,11 @@ jobs:
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
       - name: install frontend dependencies
+        if: steps.changed_src_files.outputs.any_changed == 'true'
         run: bun install --no-cache # change this to npm, pnpm or bun depending on which one you use.
 
       - uses: tauri-apps/tauri-action@v0
+        if: steps.changed_src_files.outputs.any_changed == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
