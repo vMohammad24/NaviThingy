@@ -1,6 +1,6 @@
 # Maintainer: creations <creations@creations.works>
 pkgname=navithingy-git
-pkgver=0.8.1.r63.d7d17cc
+pkgver=0.8.1.r65.75b4eb0
 pkgrel=1
 pkgdesc="A Navidrome client built with Tauri and Svelte."
 arch=("$CARCH")
@@ -14,7 +14,7 @@ optdepends=(
 )
 source=("git+https://github.com/vMohammad24/NaviThingy.git")
 sha256sums=('SKIP')
-install=navithingy.install
+install="$pkgname.install"
 provides=('navithingy')
 conflicts=('navithingy')
 
