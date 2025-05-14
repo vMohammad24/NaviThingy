@@ -8,3 +8,7 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+NaviThingy
+navithingy-git-0*
+navithingy-git-debug*
+pkg/navithingy-git
