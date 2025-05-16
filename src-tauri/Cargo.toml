@@ -1,6 +1,6 @@
 [package]
 name = "navithingy"
-version = "0.8.1"
+version = "0.8.2"
 description = "A navidrome client for desktop made by vMohammad"
 authors = ["vMohammad"]
 edition = "2021"

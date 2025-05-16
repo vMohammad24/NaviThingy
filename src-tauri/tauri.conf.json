@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "NaviThingy",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "identifier": "dev.vmohammad.navithingy",
   "build": {
     "beforeDevCommand": "bun run dev",
@@ -18,7 +18,8 @@
         "height": 800,
         "userAgent": "NaviThingy",
         "additionalBrowserArgs": "--disk-cache-size=504857600 --enable-features=MediaSession,WebOSMediaSession",
-        "skipTaskbar": false
+        "skipTaskbar": false,
+        "transparent": false
       }
     ],
     "security": {
