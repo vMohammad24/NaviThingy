@@ -22,7 +22,8 @@
     VolumeX,
   } from "lucide-svelte";
   import { onMount } from "svelte";
-  import { fade } from "svelte/transition";
+  import { cubicOut } from "svelte/easing";
+  import { fade, fly, scale, slide } from "svelte/transition";
   import Queue from "./Queue.svelte";
   import Rating from "./Rating.svelte";
 
@@ -47,6 +48,11 @@
   let isDragging = false;
   let dragProgress = 0;
   let lastFetchedLyricsId: string | null = null;
+
+  const transactionDuration = 600;
+  const bgTransitionDuration = 700;
+  const containerDelay = 100;
+  const contentDelay = 250;
 
   $: {
     if ($player.currentTrack) {
@@ -141,19 +147,20 @@
   }
 
   async function toggleFullscreen() {
-    isFullscreen = !isFullscreen;
-    sidebarHidden.set(isFullscreen);
-    if (
-      isFullscreen &&
-      lyrics &&
-      $player.currentTrack &&
-      $player.currentTrack.id === lastFetchedLyricsId
-    ) {
-      scrollToCurrentLyric();
-    }
-    updateCurrentLyric();
+    setTimeout(() => {
+      isFullscreen = !isFullscreen;
+      sidebarHidden.set(isFullscreen);
+      if (
+        isFullscreen &&
+        lyrics &&
+        $player.currentTrack &&
+        $player.currentTrack.id === lastFetchedLyricsId
+      ) {
+        scrollToCurrentLyric();
+      }
+      updateCurrentLyric();
+    }, 50);
   }
-
   function updateCurrentLyric() {
     if (!lyrics?.synced || !lyrics.lines.length) {
       currentLyricIndex = -1;
@@ -357,22 +364,35 @@
     <div
       class="fixed inset-0 bg-cover bg-center bg-no-repeat z-20"
       style="background-image: url('{$player.currentTrack.coverArt}');"
+      transition:fade={{ duration: bgTransitionDuration, easing: cubicOut }}
     >
-      <div class="absolute inset-0 bg-black/50"></div>
+      <div
+        class="absolute inset-0 bg-gradient-to-b from-black/70 to-black/60 backdrop-blur-sm"
+        transition:fade={{ duration: bgTransitionDuration + 200 }}
+      ></div>
     </div>
   {/if}
 
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
-    class={`fixed transition-all duration-300 z-30 border-primary/20 p-4 ${
+    class={`fixed z-30 border-primary/20 p-4 ${
       isFullscreen ? "top-0 h-screen" : "bottom-0"
     } left-0 right-0 ${
       isFullscreen ? "backdrop-blur-2xl" : "backdrop-blur-md border-t"
     }`}
+    transition:slide={{
+      duration: transactionDuration,
+      easing: cubicOut,
+      axis: "y",
+      delay: containerDelay,
+    }}
   >
     {#if duration > 0}
-      <div class="absolute top-0 left-0 right-0">
+      <div
+        class="absolute top-0 left-0 right-0"
+        transition:fade={{ duration: 300, delay: isFullscreen ? 300 : 0 }}
+      >
         <div
           class="relative group"
           on:mousedown={handleProgressMouseDown}
@@ -421,17 +441,48 @@
     <div class="container mx-auto h-full">
       {#if isFullscreen}
         <div
-          class="h-full flex flex-col gap-4 p-4 bg-surface/40"
-          transition:fade
+          class="h-full flex flex-col gap-4 p-4 bg-surface/40 rounded-lg shadow-2xl"
+          in:fly={{
+            y: 40,
+            duration: transactionDuration,
+            delay: contentDelay,
+            easing: cubicOut,
+          }}
+          out:fly={{
+            y: 40,
+            duration: transactionDuration * 0.6,
+            easing: cubicOut,
+          }}
         >
           <div
             class="w-full flex items-center gap-4 p-4 bg-surface/50 rounded-lg"
+            in:fly={{
+              y: 20,
+              duration: transactionDuration,
+              delay: contentDelay + 100,
+              easing: cubicOut,
+            }}
+            out:fly={{ y: 10, duration: transactionDuration * 0.5 }}
           >
-            <img
-              src={$player.currentTrack.coverArt}
-              alt={$player.currentTrack.title}
-              class="w-24 h-24 rounded-lg shadow-xl object-cover"
-            />
+            <div class="relative">
+              <!-- Add a container for better animation coordination -->
+              <div
+                class="w-24 h-24 rounded-lg shadow-xl overflow-hidden"
+                in:scale={{
+                  start: 0.9,
+                  duration: transactionDuration,
+                  delay: contentDelay,
+                  easing: cubicOut,
+                }}
+              >
+                <img
+                  src={$player.currentTrack.coverArt}
+                  alt={$player.currentTrack.title}
+                  class="w-full h-full object-cover transform transition-all duration-500 hover:scale-105 hover:rotate-2"
+                />
+              </div>
+            </div>
+
             <div class="flex flex-col flex-1">
               <div class="flex items-center gap-2">
                 <a
@@ -470,7 +521,10 @@
                 >
               {/if}
             </div>
-            <div class="flex items-center">
+            <div
+              class="flex items-center"
+              in:fly={{ x: 20, duration: transactionDuration, delay: 600 }}
+            >
               {#key $player.currentTrack.id}
                 <Rating
                   id={$player.currentTrack.id}
@@ -483,6 +537,8 @@
           <div class="flex-1 flex gap-4 min-h-0">
             <div
               class="flex-1 bg-surface/50 rounded-lg overflow-hidden flex flex-col"
+              in:fly={{ x: -30, duration: transactionDuration, delay: 600 }}
+              out:fly={{ x: -30, duration: 300 }}
             >
               <h3 class="text-lg font-semibold p-4 border-b border-primary/20">
                 Lyrics
@@ -507,6 +563,10 @@
                             class:opacity-50={i !== currentLyricIndex}
                             bind:this={currentLyricElement}
                             on:click={() => player.seek(line.time)}
+                            in:scale={{
+                              start: 0.95,
+                              duration: 300,
+                            }}
                           >
                             {line.text}
                           </p>
@@ -527,13 +587,17 @@
                       {/each}
                     </div>
                   {:else}
-                    <p class="text-xl whitespace-pre-wrap p-4">
+                    <p
+                      class="text-xl whitespace-pre-wrap p-4"
+                      in:fade={{ duration: 500, delay: 700 }}
+                    >
                       {lyrics.plain}
                     </p>
                   {/if}
                 {:else}
                   <div
                     class="h-full flex flex-col items-center justify-center text-text-secondary"
+                    in:fade={{ duration: 500, delay: 600 }}
                   >
                     <p class="text-xl mb-2">No lyrics available</p>
                     <p class="text-sm opacity-75">
@@ -547,12 +611,18 @@
 
             <div
               class="w-96 bg-surface/50 rounded-lg overflow-hidden flex flex-col"
+              in:fly={{ x: 30, duration: 500, delay: 700 }}
+              out:fly={{ x: 30, duration: 300 }}
             >
               <Queue minimal={true} />
             </div>
           </div>
 
-          <div class="w-full p-4 bg-surface/50 rounded-lg flex justify-center">
+          <div
+            class="w-full p-4 bg-surface/50 rounded-lg flex justify-center"
+            in:fly={{ y: 30, duration: 500, delay: 800 }}
+            out:fly={{ y: 30, duration: 300 }}
+          >
             <div class="flex items-center gap-6">
               <button
                 class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
@@ -571,7 +641,7 @@
               </button>
 
               <button
-                class="p-4 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105"
+                class="p-4 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105 active:scale-95"
                 on:click={() => player.togglePlay()}
               >
                 {#if $player.isPlaying}
@@ -604,15 +674,29 @@
           </div>
         </div>
       {:else}
-        <div class="flex items-center justify-between mt-4">
+        <div
+          class="flex items-center justify-between mt-4"
+          in:fly={{
+            y: 20,
+            duration: transactionDuration * 0.6,
+            easing: cubicOut,
+          }}
+          out:fly={{ y: 20, duration: transactionDuration * 0.5, delay: 100 }}
+        >
           <div class="flex items-center gap-4">
             {#if $player.currentTrack}
-              <img
-                src={$player.currentTrack.coverArt}
-                alt={$player.currentTrack.title}
-                class="w-12 h-12 rounded shadow-lg transition-transform hover:scale-105"
-                in:fade
-              />
+              <div class="relative">
+                <img
+                  src={$player.currentTrack.coverArt}
+                  alt={$player.currentTrack.title}
+                  class="w-12 h-12 rounded shadow-lg transition-transform hover:scale-105"
+                  in:scale={{
+                    start: 0.9,
+                    duration: transactionDuration * 0.7,
+                    easing: cubicOut,
+                  }}
+                />
+              </div>
               <div class="min-w-0 flex flex-col">
                 <div class="flex items-center gap-2">
                   <a
@@ -679,7 +763,7 @@
             </button>
 
             <button
-              class="p-3 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105"
+              class="p-3 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105 active:scale-95"
               on:click={() => player.togglePlay()}
             >
               {#if $player.isPlaying}
@@ -764,6 +848,7 @@
                 isFullscreen ? "text-primary" : ""
               }`}
               on:click={toggleFullscreen}
+              class:animate-pulse={!isFullscreen}
             >
               <Maximize2 size={20} />
             </button>

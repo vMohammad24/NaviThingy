@@ -15,7 +15,8 @@ export default {
       animation: {
         'progress': 'progress 2s linear infinite',
         'pulse-slow': 'pulse-slow 2s ease-in-out infinite',
-        'gradient': 'gradient 4s linear infinite'
+        'gradient': 'gradient 4s linear infinite',
+        'pulse': 'pulse 1s ease-in-out infinite',
       },
       keyframes: {
         progress: {
@@ -30,6 +31,16 @@ export default {
           '50%': {
             opacity: '1',
             transform: 'scale(1.1)'
+          }
+        },
+        'pulse': {
+          '0%, 100%': {
+            opacity: '1',
+            transform: 'scale(1)'
+          },
+          '50%': {
+            opacity: '0.5',
+            transform: 'scale(1.05)'
           }
         },
         'gradient': {
