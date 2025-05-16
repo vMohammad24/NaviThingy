@@ -15,31 +15,75 @@
   let mostPlayed: Child[] = $state([]);
   let recentlyPlayed: Child[] = $state([]);
 
+  let loadingRecent = $state(true);
+  let loadingMostPlayed = $state(true);
+  let loadingRecentlyPlayed = $state(true);
+  let loadingUserData = $state(true);
+
   async function loadData() {
     if (!$client) return;
-    loading = true;
-    error = null;
-    try {
-      const [recent, top, played, user] = await Promise.all([
-        $client.getAlbums("newest", {
-          size: 12,
-        }),
-        $client.getAlbums("frequent", {
-          size: 12,
-        }),
-        $client.getAlbums("recent", {
-          size: 12,
-        }),
-        $client.getUserData(),
-      ]);
 
-      recentAlbums = recent.album || [];
-      mostPlayed = top.album || [];
-      recentlyPlayed = played.album || [];
-      username = user.username;
-      loading = false;
+    loading = true;
+    loadingRecent = true;
+    loadingMostPlayed = true;
+    loadingRecentlyPlayed = true;
+    loadingUserData = true;
+    error = null;
+
+    try {
+      $client
+        .getAlbums("newest", { size: 12 })
+        .then((recent) => {
+          recentAlbums = recent.album || [];
+          loadingRecent = false;
+          checkLoadingComplete();
+        })
+        .catch(handleError);
+
+      $client
+        .getAlbums("frequent", { size: 12 })
+        .then((top) => {
+          mostPlayed = top.album || [];
+          loadingMostPlayed = false;
+          checkLoadingComplete();
+        })
+        .catch(handleError);
+
+      $client
+        .getAlbums("recent", { size: 12 })
+        .then((played) => {
+          recentlyPlayed = played.album || [];
+          loadingRecentlyPlayed = false;
+          checkLoadingComplete();
+        })
+        .catch(handleError);
+
+      $client
+        .getUserData()
+        .then((user) => {
+          username = user.username;
+          loadingUserData = false;
+          checkLoadingComplete();
+        })
+        .catch(handleError);
     } catch (e) {
-      error = "Failed to load data";
+      handleError(e);
+    }
+  }
+
+  function handleError(e: any) {
+    console.error("Error loading data:", e);
+    error = "Failed to load data";
+    loading = false;
+  }
+
+  function checkLoadingComplete() {
+    if (
+      !loadingRecent ||
+      !loadingMostPlayed ||
+      !loadingRecentlyPlayed ||
+      !loadingUserData
+    ) {
       loading = false;
     }
   }
@@ -50,7 +94,7 @@
 </script>
 
 <div class="container mx-auto px-4 py-6 space-y-8">
-  {#if loading}
+  {#if loading && loadingUserData && loadingRecent && loadingMostPlayed && loadingRecentlyPlayed}
     <div class="grid gap-8">
       <div class="h-48 bg-surface/30 animate-pulse rounded-2xl"></div>
       {#each Array(3) as _}
@@ -87,41 +131,132 @@
       class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 to-surface p-4 sm:p-8"
     >
       <h1 class="text-xl sm:text-4xl font-bold mb-2">
-        Welcome Back, {username}
+        {loadingUserData ? "Welcome Back" : `Welcome Back, ${username}`}
       </h1>
     </header>
 
     <div in:fly={{ y: 20, duration: 500, delay: 100 }}>
       <HeroSong />
     </div>
-    {#each [{ title: "Most Played", albums: mostPlayed, link: "frequent" }, { title: "Recently Added", albums: recentAlbums, link: "newest" }, { title: "Recently Played", albums: recentlyPlayed, link: "recent" }] as section, i}
-      <section
-        in:fly={{
-          y: 20,
-          duration: 500,
-          delay: 200 + i * 100,
-          easing: quintOut,
-        }}
-      >
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl sm:text-2xl font-bold">{section.title}</h2>
-          <a
-            href="/albums/?activeTab={section.link}"
-            class="text-sm text-text-secondary hover:text-primary transition-colors"
-          >
-            View All
-          </a>
-        </div>
+
+    <section
+      in:fly={{
+        y: 20,
+        duration: 500,
+        delay: 200,
+        easing: quintOut,
+      }}
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl sm:text-2xl font-bold">Most Played</h2>
+        <a
+          href="/albums/?activeTab=frequent"
+          class="text-sm text-text-secondary hover:text-primary transition-colors"
+        >
+          View All
+        </a>
+      </div>
+      {#if loadingMostPlayed}
         <div
           class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
         >
-          {#each $isMobile ? section.albums.slice(0, 6) : section.albums as album, i}
+          {#each Array(6) as _}
+            <div
+              class="aspect-square bg-surface/30 animate-pulse rounded-xl"
+            ></div>
+          {/each}
+        </div>
+      {:else}
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+        >
+          {#each $isMobile ? mostPlayed.slice(0, 6) : mostPlayed as album, i}
             {#if i < 6 || window.innerWidth >= 768}
               <Album {album} showMetadata />
             {/if}
           {/each}
         </div>
-      </section>
-    {/each}
+      {/if}
+    </section>
+
+    <section
+      in:fly={{
+        y: 20,
+        duration: 500,
+        delay: 300,
+        easing: quintOut,
+      }}
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl sm:text-2xl font-bold">Recently Added</h2>
+        <a
+          href="/albums/?activeTab=newest"
+          class="text-sm text-text-secondary hover:text-primary transition-colors"
+        >
+          View All
+        </a>
+      </div>
+      {#if loadingRecent}
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+        >
+          {#each Array(6) as _}
+            <div
+              class="aspect-square bg-surface/30 animate-pulse rounded-xl"
+            ></div>
+          {/each}
+        </div>
+      {:else}
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+        >
+          {#each $isMobile ? recentAlbums.slice(0, 6) : recentAlbums as album, i}
+            {#if i < 6 || window.innerWidth >= 768}
+              <Album {album} showMetadata />
+            {/if}
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <section
+      in:fly={{
+        y: 20,
+        duration: 500,
+        delay: 400,
+        easing: quintOut,
+      }}
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl sm:text-2xl font-bold">Recently Played</h2>
+        <a
+          href="/albums/?activeTab=recent"
+          class="text-sm text-text-secondary hover:text-primary transition-colors"
+        >
+          View All
+        </a>
+      </div>
+      {#if loadingRecentlyPlayed}
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+        >
+          {#each Array(6) as _}
+            <div
+              class="aspect-square bg-surface/30 animate-pulse rounded-xl"
+            ></div>
+          {/each}
+        </div>
+      {:else}
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+        >
+          {#each $isMobile ? recentlyPlayed.slice(0, 6) : recentlyPlayed as album, i}
+            {#if i < 6 || window.innerWidth >= 768}
+              <Album {album} showMetadata />
+            {/if}
+          {/each}
+        </div>
+      {/if}
+    </section>
   {/if}
 </div>

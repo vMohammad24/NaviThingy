@@ -4,7 +4,11 @@
   import { player } from "$lib/stores/player";
   import { queueActions } from "$lib/stores/queueStore";
   import { sidebarHidden } from "$lib/stores/sidebarOpen";
-  import type { SyncedLyric } from "$lib/types/navidrome";
+  import type {
+    EnhancedSyncedLyric,
+    SyncedLyric,
+    SyncedWord,
+  } from "$lib/types/navidrome";
   import {
     Heart,
     ListMusic,
@@ -39,9 +43,16 @@
   let tooltipX = 0;
   let isFullscreen = false;
   let lyrics:
-    | { synced: boolean; plain: string; lines: SyncedLyric[] }
+    | {
+        synced: boolean;
+        plain: string;
+        lines: SyncedLyric[];
+        enhanced?: boolean;
+        enhancedLines?: EnhancedSyncedLyric[];
+      }
     | undefined;
   let currentLyricIndex = -1;
+  let currentWordIndex = -1;
   let lyricsContainer: HTMLDivElement;
   let currentLyricElement: HTMLParagraphElement | null = null;
   let progressInterval: number;
@@ -50,9 +61,12 @@
   let lastFetchedLyricsId: string | null = null;
 
   const transactionDuration = 600;
-  const bgTransitionDuration = 700;
-  const containerDelay = 100;
-  const contentDelay = 250;
+  const bgTransitionDuration = 800;
+  const containerDelay = 50;
+  const contentDelay = 200;
+  const controlsDelay = 400;
+
+  const getControlDelay = (index: number) => controlsDelay + index * 50;
 
   $: {
     if ($player.currentTrack) {
@@ -61,6 +75,7 @@
         currentTrackId = newTrackId;
         lyrics = undefined;
         currentLyricIndex = -1;
+        currentWordIndex = -1;
       }
       if (
         isFullscreen &&
@@ -69,9 +84,15 @@
         $player.currentTrack.id !== lastFetchedLyricsId
       ) {
         (async () => {
-          lyrics = await $client.getLyrics($player.currentTrack!);
+          const lyricsResult = await $client.getLyrics($player.currentTrack!);
+          if (lyricsResult?.synced && lyricsResult.lines.length) {
+            lyricsResult.enhanced = true;
+            lyricsResult.enhancedLines = parseWordTimings(lyricsResult.lines);
+          }
+          lyrics = lyricsResult;
           lastFetchedLyricsId = $player.currentTrack?.id || null;
           currentLyricIndex = -1;
+          currentWordIndex = -1;
           updateCurrentLyric();
           scrollToCurrentLyric();
         })();
@@ -147,20 +168,214 @@
   }
 
   async function toggleFullscreen() {
-    setTimeout(() => {
-      isFullscreen = !isFullscreen;
-      sidebarHidden.set(isFullscreen);
-      if (
-        isFullscreen &&
-        lyrics &&
-        $player.currentTrack &&
-        $player.currentTrack.id === lastFetchedLyricsId
-      ) {
-        scrollToCurrentLyric();
-      }
-      updateCurrentLyric();
-    }, 50);
+    if (isFullscreen) {
+      setTimeout(() => {
+        isFullscreen = false;
+        sidebarHidden.set(false);
+      }, 100);
+    } else {
+      setTimeout(() => {
+        isFullscreen = true;
+        sidebarHidden.set(true);
+        if (
+          lyrics &&
+          $player.currentTrack &&
+          $player.currentTrack.id === lastFetchedLyricsId
+        ) {
+          scrollToCurrentLyric();
+        }
+        updateCurrentLyric();
+      }, 50);
+    }
   }
+  function parseWordTimings(lines: SyncedLyric[]): EnhancedSyncedLyric[] {
+    function estimateSyllables(word: string): number {
+      word = word.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      if (word.length <= 3) return 1;
+
+      const vowelGroups = word.match(/[aeiouy]+/g);
+      if (!vowelGroups) return 1;
+
+      let count = vowelGroups.length;
+      if (word.endsWith("e") && count > 1) count--;
+
+      return Math.max(1, count);
+    }
+
+    function extractParentheses(text: string): {
+      cleanText: string;
+      parentheticals: Array<{
+        content: string;
+        startPos: number;
+        endPos: number;
+      }>;
+    } {
+      const parentheticals: Array<{
+        content: string;
+        startPos: number;
+        endPos: number;
+      }> = [];
+      let depth = 0;
+      let startIndex = -1;
+
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === "(" && (i === 0 || text[i - 1] !== "\\")) {
+          if (depth === 0) {
+            startIndex = i;
+          }
+          depth++;
+        } else if (text[i] === ")" && (i === 0 || text[i - 1] !== "\\")) {
+          if (depth > 0) depth--;
+          if (depth === 0 && startIndex !== -1) {
+            const content = text.substring(startIndex, i + 1);
+
+            parentheticals.push({
+              content,
+              startPos: startIndex,
+              endPos: i + 1,
+            });
+
+            startIndex = -1;
+          }
+        }
+      }
+      return { cleanText: text, parentheticals };
+    }
+
+    return lines.map((line, lineIndex) => {
+      const { cleanText, parentheticals } = extractParentheses(line.text);
+      const wordMatches = [
+        ...cleanText.matchAll(
+          /([a-zA-Z0-9]+['']*[a-zA-Z0-9]*[.,!?;:]*)|([\p{P}]+)/gu,
+        ),
+      ];
+
+      const wordsWithInfo = wordMatches
+        .map((m) => {
+          const word = m[0];
+          const position = m.index || 0;
+          const endPosition = position + word.length;
+          const isInParentheses = parentheticals.some(
+            (p) => position >= p.startPos && endPosition <= p.endPos,
+          );
+
+          return {
+            word,
+            position,
+            isParenthetical: isInParentheses,
+          };
+        })
+        .filter(({ word }) => word.trim());
+      parentheticals.forEach((p) => {
+        const isAlreadyCovered = wordsWithInfo.some(
+          (w) =>
+            w.position >= p.startPos && w.position + w.word.length <= p.endPos,
+        );
+
+        if (!isAlreadyCovered) {
+          wordsWithInfo.push({
+            word: p.content,
+            position: p.startPos,
+            isParenthetical: true,
+          });
+        }
+      });
+
+      wordsWithInfo.sort((a, b) => a.position - b.position);
+
+      const words = wordsWithInfo.map((w) => w.word);
+
+      const nextLineTime = lines[lineIndex + 1]?.time ?? line.time + 5;
+      const lineDuration = nextLineTime - line.time;
+
+      const syllableCounts = words.map((word) => {
+        if (word.startsWith("(") && word.endsWith(")")) {
+          const innerContent = word.slice(1, -1);
+          return estimateSyllables(innerContent) * 0.8;
+        }
+        return estimateSyllables(word);
+      });
+
+      const totalSyllables = syllableCounts.reduce(
+        (sum, count) => sum + count,
+        0,
+      );
+
+      const hasPunctuation = (word: string) => /[.,:;!?]$/.test(word);
+      const isParenthetical = (word: string) =>
+        word.startsWith("(") && word.endsWith(")");
+
+      let currentTime = line.time;
+      const syncedWords: SyncedWord[] = [];
+
+      words.forEach((word, i) => {
+        if (!word.trim()) return;
+
+        const syllableRatio = syllableCounts[i] / totalSyllables;
+
+        let wordDuration = lineDuration * syllableRatio;
+
+        if (hasPunctuation(word)) {
+          wordDuration *= 1.2;
+        }
+
+        if (isParenthetical(word)) {
+          wordDuration *= 0.8;
+        }
+
+        if (i === words.length - 1) {
+          wordDuration *= 1.15;
+        }
+
+        wordDuration = Math.max(
+          0.1,
+          Math.min(wordDuration, lineDuration * 0.5),
+        );
+
+        const wordTiming = {
+          time: currentTime,
+          word,
+          endTime: currentTime + wordDuration,
+          isParenthetical: isParenthetical(word),
+        };
+
+        syncedWords.push(wordTiming);
+
+        const overlapFactor = hasPunctuation(word) ? 0.8 : 0.9;
+        const parentheticalOverlapAdjustment = isParenthetical(word)
+          ? 0.7
+          : 1.0;
+        currentTime +=
+          wordDuration * overlapFactor * parentheticalOverlapAdjustment;
+      });
+
+      return {
+        time: line.time,
+        text: line.text,
+        words: syncedWords,
+      };
+    });
+  }
+
+  function updateCurrentWord() {
+    if (!lyrics?.enhanced || currentLyricIndex === -1 || !lyrics.enhancedLines)
+      return;
+
+    const currentLine = lyrics.enhancedLines[currentLyricIndex];
+    if (!currentLine?.words?.length) return;
+
+    const newWordIndex = currentLine.words.findIndex((word, i) => {
+      const endTime =
+        word.endTime || (currentLine.words[i + 1]?.time ?? Infinity);
+      return progress >= word.time && progress < endTime;
+    });
+
+    if (newWordIndex !== currentWordIndex) {
+      currentWordIndex = newWordIndex;
+    }
+  }
+
   function updateCurrentLyric() {
     if (!lyrics?.synced || !lyrics.lines.length) {
       currentLyricIndex = -1;
@@ -174,6 +389,11 @@
 
     if (newIndex !== currentLyricIndex) {
       currentLyricIndex = newIndex;
+      currentWordIndex = -1;
+    }
+
+    if (lyrics.enhanced) {
+      updateCurrentWord();
     }
   }
 
@@ -364,11 +584,13 @@
     <div
       class="fixed inset-0 bg-cover bg-center bg-no-repeat z-20"
       style="background-image: url('{$player.currentTrack.coverArt}');"
-      transition:fade={{ duration: bgTransitionDuration, easing: cubicOut }}
+      in:fade={{ duration: bgTransitionDuration, easing: cubicOut }}
+      out:fade={{ duration: bgTransitionDuration * 0.8, easing: cubicOut }}
     >
       <div
         class="absolute inset-0 bg-gradient-to-b from-black/70 to-black/60 backdrop-blur-sm"
-        transition:fade={{ duration: bgTransitionDuration + 200 }}
+        in:fade={{ duration: bgTransitionDuration + 200, delay: 100 }}
+        out:fade={{ duration: bgTransitionDuration * 0.6 }}
       ></div>
     </div>
   {/if}
@@ -381,17 +603,22 @@
     } left-0 right-0 ${
       isFullscreen ? "backdrop-blur-2xl" : "backdrop-blur-md border-t"
     }`}
-    transition:slide={{
+    in:slide={{
       duration: transactionDuration,
       easing: cubicOut,
       axis: "y",
       delay: containerDelay,
     }}
+    out:slide={{
+      duration: transactionDuration * 0.8,
+      easing: cubicOut,
+      axis: "y",
+    }}
   >
     {#if duration > 0}
       <div
         class="absolute top-0 left-0 right-0"
-        transition:fade={{ duration: 300, delay: isFullscreen ? 300 : 0 }}
+        in:fade={{ duration: 300, delay: isFullscreen ? 300 : 0 }}
       >
         <div
           class="relative group"
@@ -442,37 +669,50 @@
       {#if isFullscreen}
         <div
           class="h-full flex flex-col gap-4 p-4 bg-surface/40 rounded-lg shadow-2xl"
-          in:fly={{
-            y: 40,
+          in:scale={{
+            start: 0.95,
+            opacity: 0,
             duration: transactionDuration,
             delay: contentDelay,
             easing: cubicOut,
           }}
-          out:fly={{
-            y: 40,
-            duration: transactionDuration * 0.6,
+          out:scale={{
+            start: 0.95,
+            opacity: 0,
+            duration: transactionDuration * 0.7,
             easing: cubicOut,
           }}
         >
           <div
             class="w-full flex items-center gap-4 p-4 bg-surface/50 rounded-lg"
             in:fly={{
-              y: 20,
+              y: 10,
+              x: 0,
+              opacity: 0,
               duration: transactionDuration,
               delay: contentDelay + 100,
               easing: cubicOut,
             }}
-            out:fly={{ y: 10, duration: transactionDuration * 0.5 }}
+            out:fly={{
+              y: 10,
+              opacity: 0,
+              duration: transactionDuration * 0.5,
+            }}
           >
             <div class="relative">
-              <!-- Add a container for better animation coordination -->
               <div
                 class="w-24 h-24 rounded-lg shadow-xl overflow-hidden"
                 in:scale={{
-                  start: 0.9,
+                  start: 0.85,
+                  opacity: 0.6,
                   duration: transactionDuration,
-                  delay: contentDelay,
+                  delay: contentDelay + 150,
                   easing: cubicOut,
+                }}
+                out:scale={{
+                  start: 0.85,
+                  opacity: 0,
+                  duration: transactionDuration * 0.6,
                 }}
               >
                 <img
@@ -537,8 +777,17 @@
           <div class="flex-1 flex gap-4 min-h-0">
             <div
               class="flex-1 bg-surface/50 rounded-lg overflow-hidden flex flex-col"
-              in:fly={{ x: -30, duration: transactionDuration, delay: 600 }}
-              out:fly={{ x: -30, duration: 300 }}
+              in:fly={{
+                x: -20,
+                opacity: 0,
+                duration: transactionDuration,
+                delay: contentDelay + 200,
+              }}
+              out:fly={{
+                x: -20,
+                opacity: 0,
+                duration: transactionDuration * 0.6,
+              }}
             >
               <h3 class="text-lg font-semibold p-4 border-b border-primary/20">
                 Lyrics
@@ -549,46 +798,77 @@
               >
                 {#if lyrics}
                   {#if lyrics.synced}
-                    <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-6 pb-8">
                       {#each lyrics.lines as line, i}
-                        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                        {#if i === currentLyricIndex}
-                          <p
-                            class={`text-2xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary ${
-                              i === currentLyricIndex
-                                ? "bg-primary/10 p-4 rounded-lg"
-                                : "hover:bg-primary/5 p-4 rounded-lg"
-                            }`}
-                            class:text-primary={i === currentLyricIndex}
-                            class:opacity-50={i !== currentLyricIndex}
+                        {#if lyrics.enhanced && lyrics.enhancedLines && i === currentLyricIndex}
+                          <div
+                            class="text-2xl leading-relaxed min-h-[60px] p-5 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 shadow-lg transform transition-all duration-300"
                             bind:this={currentLyricElement}
-                            on:click={() => player.seek(line.time)}
-                            in:scale={{
-                              start: 0.95,
+                            in:fade={{
                               duration: 300,
                             }}
                           >
-                            {line.text}
-                          </p>
+                            {#each lyrics.enhancedLines[i].words as word, wordIndex}
+                              {#if word.isParenthetical}
+                                <span
+                                  class="inline-block mr-1 opacity-70 text-text-secondary font-light italic transition-all duration-300 ease-out hover:text-primary/80 cursor-pointer {wordIndex ===
+                                  currentWordIndex
+                                    ? 'text-primary scale-105'
+                                    : 'scale-100'}"
+                                  on:click={() => player.seek(word.time)}
+                                >
+                                  {word.word}
+                                </span>
+                              {:else}
+                                <span
+                                  class="inline-block mr-1 transition-all duration-300 ease-out hover:text-primary cursor-pointer
+                                    {wordIndex <= currentWordIndex
+                                    ? 'text-primary'
+                                    : ''} 
+                                    {wordIndex === currentWordIndex
+                                    ? 'font-semibold text-shadow-primary scale-105 animate-word-highlight'
+                                    : 'font-normal text-shadow-none scale-100'}"
+                                  on:click={() => player.seek(word.time)}
+                                >
+                                  {word.word}
+                                </span>
+                              {/if}
+                            {/each}
+                          </div>
                         {:else}
-                          <p
-                            class={`text-xl transition-all duration-300 whitespace-pre-wrap cursor-pointer hover:text-primary ${
-                              i === currentLyricIndex
-                                ? "bg-primary/10 p-4 rounded-lg"
-                                : "hover:bg-primary/5 p-4 rounded-lg"
-                            }`}
-                            class:text-primary={i === currentLyricIndex}
-                            class:opacity-50={i !== currentLyricIndex}
-                            on:click={() => player.seek(line.time)}
-                          >
-                            {line.text}
-                          </p>
+                          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                          {#if i === currentLyricIndex}
+                            <p
+                              class="text-2xl leading-relaxed min-h-[60px] p-5 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 shadow-lg text-primary font-medium tracking-wide transform transition-all duration-300"
+                              bind:this={currentLyricElement}
+                              on:click={() => player.seek(line.time)}
+                              in:fade={{
+                                duration: 300,
+                              }}
+                            >
+                              {line.text}
+                            </p>
+                          {:else}
+                            <div class="min-h-[60px] relative">
+                              <p
+                                class="text-xl leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-primary p-4 rounded-lg hover:bg-primary/5
+                                       transition-all duration-300 absolute inset-0
+                                       {i < currentLyricIndex
+                                  ? 'opacity-40'
+                                  : 'opacity-60'} 
+                                       hover:opacity-90 hover:scale-[1.02] hover:pl-5"
+                                on:click={() => player.seek(line.time)}
+                              >
+                                {line.text}
+                              </p>
+                            </div>
+                          {/if}
                         {/if}
                       {/each}
                     </div>
                   {:else}
                     <p
-                      class="text-xl whitespace-pre-wrap p-4"
+                      class="text-xl leading-relaxed whitespace-pre-wrap p-6 font-light tracking-wide"
                       in:fade={{ duration: 500, delay: 700 }}
                     >
                       {lyrics.plain}
@@ -599,7 +879,7 @@
                     class="h-full flex flex-col items-center justify-center text-text-secondary"
                     in:fade={{ duration: 500, delay: 600 }}
                   >
-                    <p class="text-xl mb-2">No lyrics available</p>
+                    <p class="text-xl mb-3 font-medium">No lyrics available</p>
                     <p class="text-sm opacity-75">
                       Try searching online for "{$player.currentTrack.title} by {$player
                         .currentTrack.artist}" lyrics
@@ -611,8 +891,17 @@
 
             <div
               class="w-96 bg-surface/50 rounded-lg overflow-hidden flex flex-col"
-              in:fly={{ x: 30, duration: 500, delay: 700 }}
-              out:fly={{ x: 30, duration: 300 }}
+              in:fly={{
+                x: 20,
+                opacity: 0,
+                duration: transactionDuration,
+                delay: contentDelay + 250,
+              }}
+              out:fly={{
+                x: 20,
+                opacity: 0,
+                duration: transactionDuration * 0.6,
+              }}
             >
               <Queue minimal={true} />
             </div>
@@ -620,56 +909,46 @@
 
           <div
             class="w-full p-4 bg-surface/50 rounded-lg flex justify-center"
-            in:fly={{ y: 30, duration: 500, delay: 800 }}
-            out:fly={{ y: 30, duration: 300 }}
+            in:fly={{
+              y: 20,
+              opacity: 0,
+              duration: transactionDuration,
+              delay: contentDelay + 300,
+            }}
+            out:fly={{
+              y: 20,
+              opacity: 0,
+              duration: transactionDuration * 0.5,
+            }}
           >
             <div class="flex items-center gap-6">
-              <button
-                class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
-                  $player.shuffle ? "text-primary" : ""
-                }`}
-                on:click={() => player.toggleShuffle()}
-              >
-                <Shuffle size={24} />
-              </button>
-
-              <button
-                class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-                on:click={() => player.previous()}
-              >
-                <SkipBack size={32} />
-              </button>
-
-              <button
-                class="p-4 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105 active:scale-95"
-                on:click={() => player.togglePlay()}
-              >
-                {#if $player.isPlaying}
-                  <Pause size={40} />
-                {:else}
-                  <Play size={40} />
-                {/if}
-              </button>
-
-              <button
-                class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-                on:click={() => player.next()}
-              >
-                <SkipForward size={32} />
-              </button>
-
-              <button
-                class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
-                  $player.repeat !== "none" ? "text-primary" : ""
-                }`}
-                on:click={() => player.toggleRepeat()}
-              >
-                {#if $player.repeat === "one"}
-                  <Repeat1 size={24} />
-                {:else}
-                  <Repeat size={24} />
-                {/if}
-              </button>
+              {#each [{ action: () => player.toggleShuffle(), icon: Shuffle, active: $player.shuffle, size: 24 }, { action: () => player.previous(), icon: SkipBack, size: 32 }, { action: () => player.togglePlay(), icon: $player.isPlaying ? Pause : Play, size: 40, primary: true }, { action: () => player.next(), icon: SkipForward, size: 32 }, { action: () => player.toggleRepeat(), icon: $player.repeat === "one" ? Repeat1 : Repeat, active: $player.repeat !== "none", size: 24 }] as btn, i}
+                <button
+                  class={`p-${btn.primary ? 4 : 2} rounded-full ${
+                    btn.primary
+                      ? "bg-primary text-background hover:opacity-90"
+                      : "hover:bg-primary/20"
+                  } transition-all ${btn.active ? "text-primary" : ""} ${
+                    btn.primary ? "hover:scale-105 active:scale-95" : ""
+                  }`}
+                  on:click={btn.action}
+                  in:scale={{
+                    start: 0.8,
+                    opacity: 0,
+                    duration: 400,
+                    delay: getControlDelay(i),
+                    easing: cubicOut,
+                  }}
+                  out:scale={{
+                    start: 0.8,
+                    opacity: 0,
+                    duration: 300,
+                    delay: i * 30,
+                  }}
+                >
+                  <svelte:component this={btn.icon} size={btn.size} />
+                </button>
+              {/each}
             </div>
           </div>
         </div>
@@ -677,11 +956,17 @@
         <div
           class="flex items-center justify-between mt-4"
           in:fly={{
-            y: 20,
+            y: 10,
+            opacity: 0,
             duration: transactionDuration * 0.6,
             easing: cubicOut,
           }}
-          out:fly={{ y: 20, duration: transactionDuration * 0.5, delay: 100 }}
+          out:fly={{
+            y: 10,
+            opacity: 0,
+            duration: transactionDuration * 0.5,
+            delay: 100,
+          }}
         >
           <div class="flex items-center gap-4">
             {#if $player.currentTrack}
@@ -691,7 +976,8 @@
                   alt={$player.currentTrack.title}
                   class="w-12 h-12 rounded shadow-lg transition-transform hover:scale-105"
                   in:scale={{
-                    start: 0.9,
+                    start: 0.85,
+                    opacity: 0.6,
                     duration: transactionDuration * 0.7,
                     easing: cubicOut,
                   }}
@@ -791,7 +1077,7 @@
               {:else if $player.repeat === "all"}
                 <Repeat size={20} />
               {:else}
-                <Repeat size={20} style="opacity: 0.5;" />
+                <Repeat size={20} class="opacity-50" />
               {/if}
             </button>
 
@@ -849,6 +1135,11 @@
               }`}
               on:click={toggleFullscreen}
               class:animate-pulse={!isFullscreen}
+              in:scale={{
+                start: 0.9,
+                duration: 300,
+                delay: 400,
+              }}
             >
               <Maximize2 size={20} />
             </button>
