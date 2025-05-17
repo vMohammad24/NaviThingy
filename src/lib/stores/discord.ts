@@ -24,7 +24,6 @@ async function updatePresence(options: DiscordRPCOptions): Promise<void> {
         start_time: options.startTime?.toString(),
         end_time: options.endTime?.toString(),
     };
-
     return invoke<void>("update_rpc", { rpc: rpcPayload });
 }
 
@@ -105,15 +104,21 @@ function createDiscordRPCStore() {
     const { subscribe, set } = writable<boolean>(storedValue);
 
     let lastTrack: string | undefined = undefined;
-    let lastTrackTime: number | undefined = undefined;
+    let lastTrackTime: number = 0;
+    let lastisPlaying: boolean = false;
     let unsub: () => void = () => { };
     const sub = () => {
         unsub = player.subscribe((state) => {
             const currentTrack = state.currentTrack;
             const progress = player.getProgress();
-            if (currentTrack && (currentTrack.id !== lastTrack || (lastTrackTime && currentTrack.id === lastTrack && progress > lastTrackTime + 1000))) {
+            if (currentTrack && ((currentTrack.id !== lastTrack) || (lastTrackTime && currentTrack.id === lastTrack && progress > lastTrackTime + 5 || lastisPlaying !== state.isPlaying))) {
                 lastTrack = currentTrack.id;
-                lastTrackTime = Date.now();
+                lastTrackTime = progress;
+                lastisPlaying = state.isPlaying;
+                if (!state.isPlaying) {
+                    clearPresence();
+                    return;
+                }
                 const { artist, album, duration } = currentTrack;
                 setPresence({
                     artist: artist!,
@@ -145,7 +150,7 @@ function createDiscordRPCStore() {
             set(false);
             unsub();
             lastTrack = undefined;
-            lastTrackTime = undefined;
+            lastTrackTime = 0;
             clearPresence();
         },
         toggle: () => {

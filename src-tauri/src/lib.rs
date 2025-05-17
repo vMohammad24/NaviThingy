@@ -273,7 +273,7 @@ fn mpv_seek_precise(position: f64, app_handle: tauri::AppHandle) -> Result<(), S
     player.seek(position)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct DiscordRPC {
     app_id: Option<String>,
     details: Option<String>,
@@ -286,17 +286,31 @@ struct DiscordRPC {
 
 #[tauri::command]
 async fn update_rpc(rpc: DiscordRPC, app_handle: tauri::AppHandle) -> Result<(), String> {
+    let should_die = rpc.details.is_none()
+        && rpc.state.is_none()
+        && rpc.large_image.is_none()
+        && rpc.small_image.is_none()
+        && rpc.start_time.is_none()
+        && rpc.end_time.is_none();
+
     if let Some(discord_state) = app_handle.try_state::<Arc<Mutex<DiscordClient>>>() {
         if let Ok(mut client) = discord_state.lock() {
-            return client.update_presence(
-                rpc.app_id,
-                rpc.details,
-                rpc.state,
-                rpc.large_image,
-                rpc.small_image,
-                rpc.start_time,
-                rpc.end_time,
-            );
+            if should_die {
+                client.shutdown();
+                return Ok(());
+            } else {
+                client.initialize();
+
+                return client.update_presence(
+                    rpc.app_id,
+                    rpc.details,
+                    rpc.state,
+                    rpc.large_image,
+                    rpc.small_image,
+                    rpc.start_time,
+                    rpc.end_time,
+                );
+            }
         }
     }
     Err("failed to setup discord rpc".into())
