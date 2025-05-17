@@ -1470,6 +1470,15 @@ function createPlayerStore() {
                 return { ...state, scrobble: value };
             });
         },
+
+        getCurrentTrack: () => {
+            let currentTrack: Child | null = null;
+            const unsubscribe = subscribe(state => {
+                currentTrack = state.currentTrack;
+            });
+            unsubscribe();
+            return currentTrack as Child | null;
+        },
         stop: () => {
             update(state => ({ ...state, isPlaying: false }));
         },
@@ -1486,7 +1495,14 @@ function createPlayerStore() {
         },
         getVolume: () => audioPlayer.volume,
         getProgress: () => audioPlayer.progress,
-        getDuration: () => audioPlayer.duration,
+        getDuration: () => {
+            let duration: number = 0;
+            const unsubscribe = subscribe(state => {
+                duration = state.currentTrack?.duration || audioPlayer.duration || 0;
+            });
+            unsubscribe();
+            return duration;
+        },
         setReplayGainEnabled: (enabled: boolean) => {
             update(state => {
                 localStorage.setItem('replayGainEnabled', enabled.toString());

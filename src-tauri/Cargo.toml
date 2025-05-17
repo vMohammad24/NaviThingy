@@ -31,6 +31,7 @@ tauri-plugin-autostart = "2.3.0"
 tauri-plugin-single-instance = "2.2.3"
 tauri-plugin-updater = "2.7.0"
 tauri-plugin-window-state = "2.2.2"
+discord-rich-presence = "0.2.5"
 
 [profile.dev]
 incremental = true
@@ -46,4 +47,4 @@ codegen-units = 1
 lto = true
 opt-level = "z"
 panic = "abort"
-strip = true 
+strip = true

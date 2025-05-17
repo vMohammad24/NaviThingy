@@ -2,6 +2,7 @@
   import { download } from "$lib/client/util";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import Modal from "$lib/components/Modal.svelte";
+  import { discordRPC, lastfm } from "$lib/stores/discord";
   import { mpvSettings, player } from "$lib/stores/player";
   import { selectedServer } from "$lib/stores/selectedServer";
   import { servers } from "$lib/stores/servers";
@@ -43,6 +44,8 @@
     total: 0,
     status: null as "Started" | "Progress" | "Finished" | null,
   };
+  let lastfmApiKey = $lastfm;
+  let discordRpcEnabled = $discordRPC;
 
   onMount(async () => {
     tauriVersion = await getTauriVersion();
@@ -241,6 +244,24 @@
   function toggleMpv() {
     mpvEnabled = !mpvEnabled;
     player.setMpvEnabled(mpvEnabled);
+  }
+
+  function saveLastfmApiKey() {
+    lastfm.set(lastfmApiKey);
+    toast.success("Last.fm API key saved");
+  }
+
+  function clearLastfmApiKey() {
+    lastfmApiKey = "";
+    lastfm.clear();
+    toast.success("Last.fm API key cleared");
+  }
+
+  function toggleDiscordRPC() {
+    discordRpcEnabled = discordRPC.toggle();
+    toast.success(
+      `Discord Rich Presence ${discordRpcEnabled ? "enabled" : "disabled"}`,
+    );
   }
 </script>
 
@@ -797,6 +818,72 @@
         </div>
       </div>
     </Modal>
+  </div>
+
+  <div class="rounded-lg p-4 sm:p-6 mb-6 sm:mb-8 shadow-lg bg-surface">
+    <h2 class="text-xl font-semibold mb-4">Discord Rich Presence</h2>
+    <div class="space-y-4">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
+        <div>
+          <h3 class="font-medium">Discord Rich Presence</h3>
+          <p class="text-sm text-text-secondary">
+            Show your currently playing song in Discord
+          </p>
+        </div>
+        <button
+          class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {$discordRPC
+            ? 'bg-primary text-background'
+            : 'bg-surface'}"
+          on:click={toggleDiscordRPC}
+        >
+          {$discordRPC ? "Enabled" : "Disabled"}
+        </button>
+      </div>
+
+      {#if $discordRPC}
+        <div>
+          <h3 class="font-medium mb-2">Last.fm Integration</h3>
+          <p class="text-sm text-text-secondary mb-3">
+            Enter your Last.fm API key to retrieve album art for Discord Rich
+            Presence
+            <a
+              href="https://www.last.fm/api/account/create"
+              target="_blank"
+              class="text-primary hover:underline"
+            >
+              Get a Last.fm API key here
+            </a>
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              type="password"
+              placeholder="Enter Last.fm API key"
+              class="flex-1 p-2 rounded-lg bg-background text-text"
+              bind:value={lastfmApiKey}
+            />
+            <div class="flex gap-2 w-full sm:w-auto">
+              <button
+                class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 flex-1 sm:flex-initial"
+                on:click={saveLastfmApiKey}
+              >
+                Save
+              </button>
+              <button
+                class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20 flex-1 sm:flex-initial"
+                on:click={clearLastfmApiKey}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          {#if $lastfm}
+            <p class="text-xs text-green-500 mt-1">Last.fm API key is set</p>
+          {/if}
+        </div>
+      {/if}
+    </div>
   </div>
 
   <div class="rounded-lg p-4 sm:p-6 shadow-lg bg-surface">

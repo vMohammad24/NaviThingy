@@ -17,12 +17,12 @@
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import MobilePlayer from "$lib/components/MobilePlayer.svelte";
   import Navigation from "$lib/components/Navigation.svelte";
+  import { discordRPC } from "$lib/stores/discord";
   import "../app.css";
 
   let showSearch = false;
   const appWindow = getCurrentWindow();
-  let touchStartX = 0;
-  let touchEndX = 0;
+  discordRPC; // just to make sure it starts cuz i <3 svelte
 
   onMount(() => {
     checkMobile();
