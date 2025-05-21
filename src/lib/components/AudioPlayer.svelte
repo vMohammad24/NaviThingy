@@ -189,6 +189,161 @@
     }
   }
   function parseWordTimings(lines: SyncedLyric[]): EnhancedSyncedLyric[] {
+    const DEFAULT_MEDIAN_LINE_DURATION = 4.0;
+    const MEDIAN_FILTER_MIN_INTERVAL = 0.1;
+    const MEDIAN_FILTER_MAX_INTERVAL = 20.0;
+    const LONG_PAUSE_MULTIPLIER_THRESHOLD = 2.5;
+    const CAPPED_DURATION_MULTIPLIER = 1.5;
+    const MIN_EFFECTIVE_LINE_DURATION_PROCESSING = 1.0;
+    const LAST_LINE_MIN_EFFECTIVE_DURATION = Math.max(
+      DEFAULT_MEDIAN_LINE_DURATION,
+      2.0,
+    );
+    type PunctuationType =
+      | "default"
+      | "comma"
+      | "period"
+      | "exclamation"
+      | "question"
+      | "semicolon";
+
+    const PUNCTUATION_DURATION_MULTIPLIER: Record<PunctuationType, number> = {
+      default: 1.15,
+      comma: 1.1,
+      period: 1.25,
+      exclamation: 1.3,
+      question: 1.25,
+      semicolon: 1.15,
+    };
+    const PARENTHETICAL_DURATION_MULTIPLIER = 0.85;
+    const LAST_WORD_IN_LINE_DURATION_MULTIPLIER = 1.1;
+    const FIRST_WORD_IN_LINE_DURATION_MULTIPLIER = 1.05;
+
+    const MIN_WORD_DURATION = 0.15;
+    const MAX_WORD_DURATION_LINE_RATIO = 0.55;
+
+    const BASE_OVERLAP_FACTOR: Record<PunctuationType, number> = {
+      default: 0.92,
+      comma: 0.85,
+      period: 0.75,
+      exclamation: 0.75,
+      question: 0.8,
+      semicolon: 0.83,
+    };
+    const PARENTHETICAL_OVERLAP_EFFECT_MULTIPLIER = 0.8;
+
+    const MIN_ADVANCE_RATIO_AFTER_OVERLAP = 0.2;
+
+    const CHORUS_SIMILARITY_THRESHOLD = 0.8;
+    const CHORUS_TIMING_CONSISTENCY_FACTOR = 0.9;
+
+    const COMPLEX_WORD_LENGTH_THRESHOLD = 8;
+    const COMPLEX_WORD_DURATION_MULTIPLIER = 1.1;
+    const RARE_CHAR_PATTERN = /[xjqz]/i;
+    const RARE_CHAR_WORD_MULTIPLIER = 1.05;
+
+    const SUSTAINED_VOWEL_PATTERN = /([aeiou]{2,})/i;
+    const POTENTIAL_MELISMA_PATTERN = /(\w+['-])+\w+/;
+    const MELISMA_COMMON_WORDS = /\b(oh|ah|ooh|yeah|woah|whoa|hey|la|na|da)\b/i;
+    const END_VOWEL_PATTERN = /[aeiou]$/i;
+    const COMMON_SUSTAINED_ENDINGS = /(ay|ow|ey|ah|oh)$/i;
+
+    const MELISMA_DURATION_MULTIPLIER = 1.35;
+    const SUSTAINED_VOWEL_MULTIPLIER = 1.25;
+    const END_VOWEL_MULTIPLIER = 1.12;
+    const LINE_END_SUSTAIN_MULTIPLIER = 1.2;
+
+    const NOTE_TRANSITION_WORDS = [
+      "yeah",
+      "oh",
+      "woah",
+      "whoa",
+      "ah",
+      "ooh",
+      "oooh",
+      "hey",
+      "la",
+      "na",
+      "da",
+      "ba",
+      "mmm",
+      "hm",
+      "uh",
+    ];
+
+    function calculateMedian(numbers: number[]): number {
+      if (numbers.length === 0) return 0;
+      const sorted = [...numbers].sort((a, b) => a - b);
+      const middle = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 === 0) {
+        return numbers.length >= 2
+          ? (sorted[middle - 1] + sorted[middle]) / 2
+          : DEFAULT_MEDIAN_LINE_DURATION;
+      }
+      return sorted[middle];
+    }
+
+    const lineIntervals: number[] = [];
+    if (lines.length > 1) {
+      for (let i = 0; i < lines.length - 1; i++) {
+        const diff = lines[i + 1].time - lines[i].time;
+        if (
+          diff >= MEDIAN_FILTER_MIN_INTERVAL &&
+          diff <= MEDIAN_FILTER_MAX_INTERVAL
+        ) {
+          lineIntervals.push(diff);
+        }
+      }
+    }
+    const medianSongLineDuration =
+      lineIntervals.length > 0
+        ? calculateMedian(lineIntervals)
+        : DEFAULT_MEDIAN_LINE_DURATION;
+
+    const normalizedLines = lines.map((line) => line.text.toLowerCase().trim());
+    const similarLines: { [index: number]: number[] } = {};
+
+    for (let i = 0; i < normalizedLines.length; i++) {
+      similarLines[i] = [];
+      for (let j = 0; j < normalizedLines.length; j++) {
+        if (i !== j) {
+          const similarity = calculateStringSimilarity(
+            normalizedLines[i],
+            normalizedLines[j],
+          );
+          if (similarity > CHORUS_SIMILARITY_THRESHOLD) {
+            similarLines[i].push(j);
+          }
+        }
+      }
+    }
+
+    function calculateStringSimilarity(a: string, b: string): number {
+      if (!a.length || !b.length) return 0;
+      if (a === b) return 1;
+
+      const matrix: number[][] = Array(a.length + 1)
+        .fill(null)
+        .map(() => Array(b.length + 1).fill(0));
+
+      for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+      for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j - 1] + cost,
+          );
+        }
+      }
+
+      const maxLength = Math.max(a.length, b.length);
+      return 1 - matrix[a.length][b.length] / maxLength;
+    }
+
     function estimateSyllables(word: string): number {
       word = word.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -200,7 +355,39 @@
       let count = vowelGroups.length;
       if (word.endsWith("e") && count > 1) count--;
 
+      const diphthongs = (word.match(/[aeiouy]{2,}/g) || []).length;
+      count += diphthongs * 0.1;
+
+      const sustainedVowels = (word.match(/[aeiou]{3,}/gi) || []).length;
+      count += sustainedVowels * 0.2;
+
       return Math.max(1, count);
+    }
+
+    function analyzeSingingPatterns(word: string): {
+      hasMelisma: boolean;
+      hasSustainedVowel: boolean;
+      hasEndVowel: boolean;
+      isSustainedEnding: boolean;
+      isNoteTransitionWord: boolean;
+    } {
+      const normalizedWord = word.toLowerCase().replace(/[.,!?;:'"]/g, "");
+
+      const hasMelisma = POTENTIAL_MELISMA_PATTERN.test(normalizedWord);
+      const hasSustainedVowel = SUSTAINED_VOWEL_PATTERN.test(normalizedWord);
+      const hasEndVowel = END_VOWEL_PATTERN.test(normalizedWord);
+      const isSustainedEnding = COMMON_SUSTAINED_ENDINGS.test(normalizedWord);
+      const isNoteTransitionWord =
+        NOTE_TRANSITION_WORDS.includes(normalizedWord) ||
+        MELISMA_COMMON_WORDS.test(normalizedWord);
+
+      return {
+        hasMelisma,
+        hasSustainedVowel,
+        hasEndVowel,
+        isSustainedEnding,
+        isNoteTransitionWord,
+      };
     }
 
     function extractParentheses(text: string): {
@@ -286,13 +473,66 @@
 
       const words = wordsWithInfo.map((w) => w.word);
 
-      const nextLineTime = lines[lineIndex + 1]?.time ?? line.time + 5;
-      const lineDuration = nextLineTime - line.time;
+      const actualNextLineTime = lines[lineIndex + 1]?.time;
+      let calculatedLineDuration: number;
+      const isLastLine = lineIndex === lines.length - 1;
+
+      const isPartOfChorus = similarLines[lineIndex]?.length > 2;
+
+      if (!isLastLine && actualNextLineTime != null) {
+        calculatedLineDuration = actualNextLineTime - line.time;
+
+        if (isPartOfChorus) {
+          const similarLineDurations = similarLines[lineIndex]
+            .map((idx) => {
+              const nextTime = lines[idx + 1]?.time;
+              return nextTime
+                ? nextTime - lines[idx].time
+                : calculatedLineDuration;
+            })
+            .filter(
+              (duration) =>
+                duration >= MEDIAN_FILTER_MIN_INTERVAL &&
+                duration <= MEDIAN_FILTER_MAX_INTERVAL,
+            );
+
+          if (similarLineDurations.length > 0) {
+            const medianChorusDuration = calculateMedian(similarLineDurations);
+            calculatedLineDuration =
+              calculatedLineDuration * (1 - CHORUS_TIMING_CONSISTENCY_FACTOR) +
+              medianChorusDuration * CHORUS_TIMING_CONSISTENCY_FACTOR;
+          }
+        }
+      } else {
+        calculatedLineDuration = medianSongLineDuration;
+      }
+
+      let effectiveLineDuration = calculatedLineDuration;
+      if (
+        !isLastLine &&
+        medianSongLineDuration > 0 &&
+        calculatedLineDuration >
+          medianSongLineDuration * LONG_PAUSE_MULTIPLIER_THRESHOLD
+      ) {
+        effectiveLineDuration =
+          medianSongLineDuration * CAPPED_DURATION_MULTIPLIER;
+      } else if (isLastLine) {
+        effectiveLineDuration = Math.max(
+          medianSongLineDuration,
+          LAST_LINE_MIN_EFFECTIVE_DURATION,
+        );
+      }
+      effectiveLineDuration = Math.max(
+        effectiveLineDuration,
+        MIN_EFFECTIVE_LINE_DURATION_PROCESSING,
+      );
 
       const syllableCounts = words.map((word) => {
         if (word.startsWith("(") && word.endsWith(")")) {
           const innerContent = word.slice(1, -1);
-          return estimateSyllables(innerContent) * 0.8;
+          return (
+            estimateSyllables(innerContent) * PARENTHETICAL_DURATION_MULTIPLIER
+          );
         }
         return estimateSyllables(word);
       });
@@ -303,51 +543,148 @@
       );
 
       const hasPunctuation = (word: string) => /[.,:;!?]$/.test(word);
-      const isParenthetical = (word: string) =>
+      const getPunctuationType = (word: string): PunctuationType => {
+        if (word.endsWith(".")) return "period";
+        if (word.endsWith(",")) return "comma";
+        if (word.endsWith("!")) return "exclamation";
+        if (word.endsWith("?")) return "question";
+        if (word.endsWith(";")) return "semicolon";
+        return "default";
+      };
+      const isParentheticalWord = (word: string) =>
         word.startsWith("(") && word.endsWith(")");
+
+      const isComplexWord = (word: string) => {
+        const cleanWord = word.replace(/[^\w]/g, "");
+        return (
+          cleanWord.length > COMPLEX_WORD_LENGTH_THRESHOLD ||
+          RARE_CHAR_PATTERN.test(cleanWord)
+        );
+      };
 
       let currentTime = line.time;
       const syncedWords: SyncedWord[] = [];
 
       words.forEach((word, i) => {
-        if (!word.trim()) return;
+        if (!word.trim() || totalSyllables === 0) return;
 
         const syllableRatio = syllableCounts[i] / totalSyllables;
+        let wordDuration = effectiveLineDuration * syllableRatio;
 
-        let wordDuration = lineDuration * syllableRatio;
+        const isLastWordInLine = i === words.length - 1;
+        const isLastWordInPhrase = isLastWordInLine || hasPunctuation(word);
+        const singingPatterns = analyzeSingingPatterns(word);
 
         if (hasPunctuation(word)) {
-          wordDuration *= 1.2;
+          const punctType = getPunctuationType(word);
+          wordDuration *=
+            PUNCTUATION_DURATION_MULTIPLIER[punctType] ||
+            PUNCTUATION_DURATION_MULTIPLIER.default;
         }
 
-        if (isParenthetical(word)) {
-          wordDuration *= 0.8;
+        if (i === 0) {
+          wordDuration *= FIRST_WORD_IN_LINE_DURATION_MULTIPLIER;
         }
 
-        if (i === words.length - 1) {
-          wordDuration *= 1.15;
+        if (isLastWordInLine) {
+          wordDuration *= LAST_WORD_IN_LINE_DURATION_MULTIPLIER;
+          wordDuration *= LINE_END_SUSTAIN_MULTIPLIER;
+        }
+
+        if (singingPatterns.isNoteTransitionWord) {
+          wordDuration *= MELISMA_DURATION_MULTIPLIER;
+        } else {
+          if (singingPatterns.hasMelisma) {
+            wordDuration *= MELISMA_DURATION_MULTIPLIER;
+          }
+
+          if (singingPatterns.hasSustainedVowel) {
+            wordDuration *= SUSTAINED_VOWEL_MULTIPLIER;
+          }
+
+          if (singingPatterns.hasEndVowel && isLastWordInPhrase) {
+            wordDuration *= END_VOWEL_MULTIPLIER;
+          }
+
+          if (singingPatterns.isSustainedEnding && isLastWordInPhrase) {
+            wordDuration *= SUSTAINED_VOWEL_MULTIPLIER;
+          }
+        }
+
+        if (isComplexWord(word)) {
+          wordDuration *= COMPLEX_WORD_DURATION_MULTIPLIER;
+          if (RARE_CHAR_PATTERN.test(word)) {
+            wordDuration *= RARE_CHAR_WORD_MULTIPLIER;
+          }
         }
 
         wordDuration = Math.max(
-          0.1,
-          Math.min(wordDuration, lineDuration * 0.5),
+          MIN_WORD_DURATION,
+          Math.min(
+            wordDuration,
+            effectiveLineDuration * MAX_WORD_DURATION_LINE_RATIO,
+          ),
         );
 
-        const wordTiming = {
+        const lineEffectiveEndTime = line.time + effectiveLineDuration;
+        let proposedEndTime = currentTime + wordDuration;
+        let finalEndTime = Math.min(proposedEndTime, lineEffectiveEndTime);
+
+        if (i === words.length - 1) {
+          finalEndTime = Math.max(finalEndTime, lineEffectiveEndTime - 0.05);
+          finalEndTime = Math.max(
+            finalEndTime,
+            currentTime + MIN_WORD_DURATION,
+          );
+          finalEndTime = Math.min(finalEndTime, lineEffectiveEndTime);
+        }
+        finalEndTime = Math.max(finalEndTime, currentTime + 0.05);
+
+        const wordTiming: SyncedWord = {
           time: currentTime,
           word,
-          endTime: currentTime + wordDuration,
-          isParenthetical: isParenthetical(word),
+          endTime: finalEndTime,
+          isParenthetical: isParentheticalWord(word),
         };
-
         syncedWords.push(wordTiming);
 
-        const overlapFactor = hasPunctuation(word) ? 0.8 : 0.9;
-        const parentheticalOverlapAdjustment = isParenthetical(word)
-          ? 0.7
-          : 1.0;
-        currentTime +=
-          wordDuration * overlapFactor * parentheticalOverlapAdjustment;
+        if (i < words.length - 1) {
+          const actualDurationForThisWord = Math.max(
+            0.01,
+            finalEndTime - currentTime,
+          );
+
+          let currentOverlapFactor;
+          if (hasPunctuation(word)) {
+            const punctType = getPunctuationType(word);
+            currentOverlapFactor = BASE_OVERLAP_FACTOR[punctType];
+          } else {
+            currentOverlapFactor = BASE_OVERLAP_FACTOR.default;
+          }
+          if (
+            singingPatterns.hasMelisma ||
+            singingPatterns.hasSustainedVowel ||
+            singingPatterns.isNoteTransitionWord
+          ) {
+            currentOverlapFactor *= 0.9;
+          }
+
+          if (isParentheticalWord(word)) {
+            currentOverlapFactor *= PARENTHETICAL_OVERLAP_EFFECT_MULTIPLIER;
+          }
+
+          let advance = actualDurationForThisWord * currentOverlapFactor;
+          advance = Math.max(
+            advance,
+            actualDurationForThisWord * MIN_ADVANCE_RATIO_AFTER_OVERLAP,
+          );
+
+          currentTime += advance;
+          currentTime = Math.min(
+            currentTime,
+            lineEffectiveEndTime - MIN_WORD_DURATION,
+          );
+        }
       });
 
       return {

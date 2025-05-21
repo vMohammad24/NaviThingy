@@ -1,6 +1,6 @@
 # NaviThingy
 
-A modern, feature-rich Navidrome client built with Tauri and Svelte.
+A modern, feature-rich Navidrome/Subsonic client built with Tauri and Svelte.
 
 ## NOTE
 
@@ -8,13 +8,13 @@ This project is still in development. Please report any issues you encounter on 
 
 ## Features
 
-- Stream music from your Navidrome server
+- Stream music from your Navidrome/Subsonic server
 - Cross-platform support for Windows, Linux, MacOS, and Android
 - Beautiful UI with customizable themes
 - Quick search functionality for artists, albums, and songs (Ctrl+K)
-- Synced lyrics support via LRCLIB/Embedded lyrics
+- Word-by-Word Synced lyrics support via LRCLIB/Embedded lyrics
 - Multiple theme options (Catppuccin variants included by default)
-- Support for multiple Navidrome servers
+- Support for multiple servers
 - Responsive design for all screen sizes
 - Two playback engines: WebAudio for browser-based playback and MPV for advanced features like gapless playback and hardware decoding
 
@@ -37,7 +37,7 @@ Additional themes for NaviThingy can be found at:
 
 ## TODO
 - [x] **Add MPV as a backend for playback**
-- [ ] **Add Discord Rich Presence support**
+- [x] **Add Discord Rich Presence support**
 - [ ] **Add support for smart playlists**
 - [ ] **Improve mobile support**
 - [ ] **Add screenshots to the README**
