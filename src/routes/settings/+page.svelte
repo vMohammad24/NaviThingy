@@ -46,6 +46,7 @@
   };
   let lastfmApiKey = $lastfm;
   let discordRpcEnabled = $discordRPC;
+  let lyricsSource = localStorage.getItem("lyricsSource") || "external";
 
   onMount(async () => {
     tauriVersion = await getTauriVersion();
@@ -263,6 +264,11 @@
       `Discord Rich Presence ${discordRpcEnabled ? "enabled" : "disabled"}`,
     );
   }
+
+  function saveLyricsSource() {
+    localStorage.setItem("lyricsSource", lyricsSource);
+    toast.success("Lyrics source preference saved");
+  }
 </script>
 
 <div class="max-w-2xl mx-auto px-4">
@@ -338,42 +344,26 @@
         </button>
       </div>
 
-      {#if $player.replayGain.enabled}
-        <div class="space-y-2">
-          <div class="flex items-center gap-4">
-            <label for="replaygain-mode" class="text-sm">Mode:</label>
-            <select
-              id="replaygain-mode"
-              class="px-2 py-1 rounded-lg bg-background"
-              bind:value={$player.replayGain.mode}
-              on:change={(e) =>
-                player.setReplayGainMode(e.currentTarget.value as any)}
-            >
-              <option value="track">Track Gain</option>
-              <option value="album">Album Gain</option>
-              <option value="queue">Queue Average</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-4">
-            <label for="replaygain-preamp" class="text-sm">Pre-amp:</label>
-            <input
-              id="replaygain-preamp"
-              type="range"
-              min="-15"
-              max="15"
-              step="0.1"
-              class="flex-1"
-              bind:value={$player.replayGain.preAmp}
-              on:change={(e) =>
-                player.setReplayGainPreAmp(Number(e.currentTarget.value))}
-            />
-            <span class="text-sm w-12 text-right"
-              >{$player.replayGain.preAmp}dB</span
-            >
-          </div>
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+      >
+        <div>
+          <h3 class="font-medium">Lyrics Source</h3>
+          <p class="text-sm text-text-secondary">
+            Choose between vMohammad's enhanced API or embedded/LRCLib lyrics
+          </p>
         </div>
-      {/if}
+        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <select
+            class="px-3 py-1 rounded-lg text-sm font-medium bg-background text-text border border-surface w-full sm:w-auto"
+            bind:value={lyricsSource}
+            on:change={saveLyricsSource}
+          >
+            <option value="external">vMohammad API (Enhanced)</option>
+            <option value="embedded">Embedded/LRCLib</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -84,12 +84,32 @@
         $player.currentTrack.id !== lastFetchedLyricsId
       ) {
         (async () => {
-          const lyricsResult = await $client.getLyrics($player.currentTrack!);
-          if (lyricsResult?.synced && lyricsResult.lines.length) {
-            lyricsResult.enhanced = true;
-            lyricsResult.enhancedLines = parseWordTimings(lyricsResult.lines);
+          const lyricsSource =
+            localStorage.getItem("lyricsSource") || "external";
+          let lyricsResult = null;
+
+          if (lyricsSource === "external") {
+            lyricsResult = await fetchLyricsFromAPI($player.currentTrack!);
+            if (!lyricsResult) {
+              lyricsResult =
+                (await $client.getLyrics($player.currentTrack!)) || null;
+              if (lyricsResult?.synced && lyricsResult.lines.length) {
+                lyricsResult.enhanced = true;
+                lyricsResult.enhancedLines = parseWordTimings(
+                  lyricsResult.lines,
+                );
+              }
+            }
+          } else {
+            lyricsResult =
+              (await $client.getLyrics($player.currentTrack!)) || null;
+            if (lyricsResult?.synced && lyricsResult.lines.length) {
+              lyricsResult.enhanced = true;
+              lyricsResult.enhancedLines = parseWordTimings(lyricsResult.lines);
+            }
           }
-          lyrics = lyricsResult;
+
+          lyrics = lyricsResult || undefined;
           lastFetchedLyricsId = $player.currentTrack?.id || null;
           currentLyricIndex = -1;
           currentWordIndex = -1;
@@ -693,6 +713,58 @@
         words: syncedWords,
       };
     });
+  }
+
+  async function fetchLyricsFromAPI(track: any): Promise<{
+    synced: boolean;
+    plain: string;
+    lines: SyncedLyric[];
+    enhanced?: boolean;
+    enhancedLines?: EnhancedSyncedLyric[];
+  } | null> {
+    try {
+      const params = new URLSearchParams({
+        track: track.title,
+        artist: track.artist,
+        album: track.album || "",
+        length: track.duration?.toString() || "",
+        name: track.title,
+      });
+
+      const response = await fetch(
+        `https://api.vmohammad.dev/lyrics?${params}`,
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const enhancedLines: EnhancedSyncedLyric[] = (await response.json())
+        .enhancedLyrics;
+
+      if (
+        !enhancedLines ||
+        !Array.isArray(enhancedLines) ||
+        enhancedLines.length === 0
+      ) {
+        return null;
+      }
+      const lines: SyncedLyric[] = enhancedLines.map((line) => ({
+        time: line.time,
+        text: line.text,
+      }));
+
+      return {
+        synced: true,
+        plain: enhancedLines.map((line) => line.text).join("\n"),
+        lines,
+        enhanced: true,
+        enhancedLines,
+      };
+    } catch (error) {
+      console.warn("Failed to fetch lyrics from external API:", error);
+      return null;
+    }
   }
 
   function updateCurrentWord() {
