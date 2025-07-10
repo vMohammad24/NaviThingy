@@ -24,25 +24,25 @@
     Volume1,
     Volume2,
     VolumeX,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { cubicOut } from "svelte/easing";
   import { fade, fly, scale, slide } from "svelte/transition";
   import Queue from "./Queue.svelte";
   import Rating from "./Rating.svelte";
 
-  let progress = 0;
-  let duration = 0;
-  let volume = player.getVolume();
-  let previousVolume = volume;
-  let showVolume = false;
+  let progress = $state(0);
+  let duration = $state(0);
+  let volume = $state(player.getVolume());
+  let previousVolume = 0;
+  let showVolume = $state(false);
   let volumeTimeout: ReturnType<typeof setTimeout> | undefined;
-  let currentTrackId: string | null = null;
-  let hoveredTime = 0;
-  let isHovering = false;
-  let tooltipX = 0;
-  let isFullscreen = false;
-  let lyrics:
+  let currentTrackId = $state<string | null>(null);
+  let hoveredTime = $state(0);
+  let isHovering = $state(false);
+  let tooltipX = $state(0);
+  let isFullscreen = $state(false);
+  let lyrics = $state<
     | {
         synced: boolean;
         plain: string;
@@ -50,15 +50,16 @@
         enhanced?: boolean;
         enhancedLines?: EnhancedSyncedLyric[];
       }
-    | undefined;
-  let currentLyricIndex = -1;
-  let currentWordIndex = -1;
-  let lyricsContainer: HTMLDivElement;
-  let currentLyricElement: HTMLParagraphElement | null = null;
+    | undefined
+  >();
+  let currentLyricIndex = $state(-1);
+  let currentWordIndex = $state(-1);
+  let lyricsContainer: HTMLDivElement | null = $state(null);
+  let currentLyricElement: HTMLElement | null = $state(null);
   let progressInterval: number;
-  let isDragging = false;
-  let dragProgress = 0;
-  let lastFetchedLyricsId: string | null = null;
+  let isDragging = $state(false);
+  let dragProgress = $state(0);
+  let lastFetchedLyricsId = $state<string | null>(null);
 
   const transactionDuration = 600;
   const bgTransitionDuration = 800;
@@ -68,7 +69,7 @@
 
   const getControlDelay = (index: number) => controlsDelay + index * 50;
 
-  $: {
+  $effect(() => {
     if ($player.currentTrack) {
       const newTrackId = $player.currentTrack.id;
       if (currentTrackId !== newTrackId) {
@@ -129,7 +130,7 @@
       currentLyricIndex = -1;
       lastFetchedLyricsId = null;
     }
-  }
+  });
 
   function updateVolume(value: number) {
     volume = Math.max(0, Math.min(1, value));
@@ -818,12 +819,12 @@
     setTimeout(() => {
       try {
         if (currentLyricElement) {
-          const containerHeight = lyricsContainer.clientHeight;
+          const containerHeight = lyricsContainer?.clientHeight;
           const lyricTop = currentLyricElement.offsetTop;
           const lyricHeight = currentLyricElement.clientHeight;
 
-          lyricsContainer.scrollTo({
-            top: lyricTop - containerHeight / 2 + lyricHeight / 2,
+          lyricsContainer?.scrollTo({
+            top: lyricTop - (containerHeight || 0) / 2 + lyricHeight / 2,
             behavior: "smooth",
           });
         }
@@ -833,11 +834,10 @@
     }, 0);
   }
 
-  $: if (currentLyricIndex !== -1 && lyrics?.lines?.length) {
-    scrollToCurrentLyric();
-  }
-
   onMount(() => {
+    if (currentLyricIndex !== -1 && lyrics?.lines?.length) {
+      scrollToCurrentLyric();
+    }
     setupMediaSession();
     startProgressTracking();
 
@@ -986,7 +986,7 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if $player.currentTrack}
   {#if isFullscreen}
@@ -1004,8 +1004,6 @@
     </div>
   {/if}
 
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
     class={`fixed z-30 border-primary/20 p-4 ${
       isFullscreen ? "top-0 h-screen" : "bottom-0"
@@ -1031,14 +1029,20 @@
       >
         <div
           class="relative group"
-          on:mousedown={handleProgressMouseDown}
-          on:mouseup={handleProgressMouseUp}
-          on:mousemove={handleProgressMove}
-          on:mouseleave={() => {
+          role="slider"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={duration}
+          aria-label="Audio progress"
+          tabindex="0"
+          onmousedown={handleProgressMouseDown}
+          onmouseup={handleProgressMouseUp}
+          onmousemove={handleProgressMove}
+          onmouseleave={() => {
             isHovering = false;
             if (isDragging) handleProgressMouseUp();
           }}
-          on:mouseenter={() => (isHovering = true)}
+          onmouseenter={() => (isHovering = true)}
         >
           <div
             class="h-1 bg-primary/20 cursor-pointer transition-all duration-300 group-hover:h-2"
@@ -1137,13 +1141,13 @@
                 <a
                   class="text-2xl font-bold text-text-secondary hover:text-primary"
                   href="/songs/{$player.currentTrack.id}"
-                  on:click={toggleFullscreen}>{$player.currentTrack.title}</a
+                  onclick={toggleFullscreen}>{$player.currentTrack.title}</a
                 >
                 {#key $player.currentTrack.id}
                   {#key $player.currentTrack.starred}
                     <button
                       class="p-1 hover:scale-110 transition-transform text-primary"
-                      on:click={toggleFavorite}
+                      onclick={toggleFavorite}
                       aria-label={$player.currentTrack.starred
                         ? "Remove from favorites"
                         : "Add to favorites"}
@@ -1160,13 +1164,13 @@
               <a
                 class="text-xl text-text-secondary hover:text-primary"
                 href="/artists/{$player.currentTrack.artistId}"
-                on:click={toggleFullscreen}>{$player.currentTrack.artist}</a
+                onclick={toggleFullscreen}>{$player.currentTrack.artist}</a
               >
               {#if $player.currentTrack.album}
                 <a
                   class="text-lg text-text-secondary hover:text-primary mt-1"
                   href="/albums/{$player.currentTrack.albumId}"
-                  on:click={toggleFullscreen}>{$player.currentTrack.album}</a
+                  onclick={toggleFullscreen}>{$player.currentTrack.album}</a
                 >
               {/if}
             </div>
@@ -1219,17 +1223,27 @@
                           >
                             {#each lyrics.enhancedLines[i].words as word, wordIndex}
                               {#if word.isParenthetical}
-                                <span
+                                <button
+                                  type="button"
                                   class="inline-block mr-1 opacity-70 text-text-secondary font-light italic transition-all duration-300 ease-out hover:text-primary/80 cursor-pointer {wordIndex ===
                                   currentWordIndex
                                     ? 'text-primary scale-105'
                                     : 'scale-100'}"
-                                  on:click={() => player.seek(word.time)}
+                                  aria-label="Seek to lyric word"
+                                  onclick={() => player.seek(word.time)}
+                                  onkeydown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      player.seek(word.time);
+                                    }
+                                  }}
+                                  style="background: none; border: none; padding: 0; font: inherit;"
                                 >
                                   {word.word}
-                                </span>
+                                </button>
                               {:else}
-                                <span
+                                <button
+                                  type="button"
                                   class="inline-block mr-1 transition-all duration-300 ease-out hover:text-primary cursor-pointer
                                     {wordIndex <= currentWordIndex
                                     ? 'text-primary'
@@ -1237,39 +1251,65 @@
                                     {wordIndex === currentWordIndex
                                     ? 'font-semibold text-shadow-primary scale-105 animate-word-highlight'
                                     : 'font-normal text-shadow-none scale-100'}"
-                                  on:click={() => player.seek(word.time)}
+                                  aria-label="Seek to lyric word"
+                                  onclick={() => player.seek(word.time)}
+                                  onkeydown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      player.seek(word.time);
+                                    }
+                                  }}
+                                  style="background: none; border: none; padding: 0; font: inherit;"
                                 >
                                   {word.word}
-                                </span>
+                                </button>
                               {/if}
                             {/each}
                           </div>
                         {:else}
                           <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                           {#if i === currentLyricIndex}
-                            <p
-                              class="text-2xl leading-relaxed min-h-[60px] p-5 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 shadow-lg text-primary font-medium tracking-wide transform transition-all duration-300"
+                            <button
+                              type="button"
+                              class="text-2xl leading-relaxed min-h-[60px] p-5 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 shadow-lg text-primary font-medium tracking-wide transform transition-all duration-300 w-full text-left cursor-pointer"
                               bind:this={currentLyricElement}
-                              on:click={() => player.seek(line.time)}
+                              onclick={() => player.seek(line.time)}
+                              onkeydown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  player.seek(line.time);
+                                }
+                              }}
                               in:fade={{
                                 duration: 300,
                               }}
+                              style="background: none; border: none; font: inherit;"
+                              aria-label="Seek to lyric line"
                             >
                               {line.text}
-                            </p>
+                            </button>
                           {:else}
                             <div class="min-h-[60px] relative">
-                              <p
+                              <button
+                                type="button"
                                 class="text-xl leading-relaxed whitespace-pre-wrap cursor-pointer hover:text-primary p-4 rounded-lg hover:bg-primary/5
                                        transition-all duration-300 absolute inset-0
                                        {i < currentLyricIndex
                                   ? 'opacity-40'
                                   : 'opacity-60'} 
-                                       hover:opacity-90 hover:scale-[1.02] hover:pl-5"
-                                on:click={() => player.seek(line.time)}
+                                       hover:opacity-90 hover:scale-[1.02] hover:pl-5 w-full text-left"
+                                onclick={() => player.seek(line.time)}
+                                onkeydown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    player.seek(line.time);
+                                  }
+                                }}
+                                style="background: none; border: none; font: inherit;"
+                                aria-label="Seek to lyric line"
                               >
                                 {line.text}
-                              </p>
+                              </button>
                             </div>
                           {/if}
                         {/if}
@@ -1340,7 +1380,7 @@
                   } transition-all ${btn.active ? "text-primary" : ""} ${
                     btn.primary ? "hover:scale-105 active:scale-95" : ""
                   }`}
-                  on:click={btn.action}
+                  onclick={btn.action}
                   in:scale={{
                     start: 0.8,
                     opacity: 0,
@@ -1355,13 +1395,14 @@
                     delay: i * 30,
                   }}
                 >
-                  <svelte:component this={btn.icon} size={btn.size} />
+                  <btn.icon size={btn.size} />
                 </button>
               {/each}
             </div>
           </div>
         </div>
       {:else}
+        {@const volumeIcon = getVolumeIcon()}
         <div
           class="flex items-center justify-between mt-4"
           in:fly={{
@@ -1403,7 +1444,7 @@
                     {#key $player.currentTrack.starred}
                       <button
                         class="p-1 hover:scale-110 transition-transform text-primary"
-                        on:click={toggleFavorite}
+                        onclick={toggleFavorite}
                         aria-label={$player.currentTrack.starred
                           ? "Remove from favorites"
                           : "Add to favorites"}
@@ -1445,21 +1486,21 @@
               class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
                 $player.shuffle ? "text-primary" : ""
               }`}
-              on:click={() => player.toggleShuffle()}
+              onclick={() => player.toggleShuffle()}
             >
               <Shuffle size={20} />
             </button>
 
             <button
               class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-              on:click={() => player.previous()}
+              onclick={() => player.previous()}
             >
               <SkipBack size={24} />
             </button>
 
             <button
               class="p-3 rounded-full bg-primary text-background hover:opacity-90 transition-all hover:scale-105 active:scale-95"
-              on:click={() => player.togglePlay()}
+              onclick={() => player.togglePlay()}
             >
               {#if $player.isPlaying}
                 <Pause size={24} />
@@ -1470,7 +1511,7 @@
 
             <button
               class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-              on:click={() => player.next()}
+              onclick={() => player.next()}
             >
               <SkipForward size={24} />
             </button>
@@ -1479,7 +1520,7 @@
               class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
                 $player.repeat !== "none" ? "text-primary" : ""
               }`}
-              on:click={() => player.toggleRepeat()}
+              onclick={() => player.toggleRepeat()}
             >
               {#if $player.repeat === "one"}
                 <Repeat1 size={20} />
@@ -1492,7 +1533,7 @@
 
             <button
               class="p-2 rounded-full hover:bg-primary/20 transition-colors flex items-center gap-2"
-              on:click={queueActions.toggle}
+              onclick={queueActions.toggle}
             >
               <ListMusic size={20} />
             </button>
@@ -1500,12 +1541,13 @@
             <div class="relative group">
               <button
                 class="p-2 rounded-full hover:bg-primary/20 transition-colors"
-                on:click={toggleMute}
-                on:wheel|preventDefault={handleVolumeScroll}
-                on:mouseenter={handleVolumeHover}
-                on:mouseleave={handleVolumeLeave}
+                onclick={toggleMute}
+                onwheel={handleVolumeScroll}
+                onmouseenter={handleVolumeHover}
+                onmouseleave={handleVolumeLeave}
+                aria-label={volume === 0 ? "Unmute" : "Mute"}
               >
-                <svelte:component this={getVolumeIcon()} size={20} />
+                <volumeIcon size={20}></volumeIcon>
               </button>
 
               <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1513,8 +1555,8 @@
                 class={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-lg bg-surface shadow-lg transition-opacity duration-200 ${
                   !showVolume ? "opacity-0 pointer-events-none" : ""
                 }`}
-                on:mouseenter={handleVolumeHover}
-                on:mouseleave={handleVolumeLeave}
+                onmouseenter={handleVolumeHover}
+                onmouseleave={handleVolumeLeave}
               >
                 <div class="w-32 flex items-center gap-2">
                   <div class="relative flex-1 h-1 bg-primary/20 rounded-full">
@@ -1529,7 +1571,7 @@
                       step="0.01"
                       value={volume}
                       class="absolute inset-0 w-full opacity-0 cursor-pointer"
-                      on:input={handleVolumeChange}
+                      oninput={handleVolumeChange}
                     />
                   </div>
                   <span class="text-xs text-text-secondary w-8 text-right">
@@ -1542,7 +1584,7 @@
               class={`p-2 rounded-full hover:bg-primary/20 transition-colors ${
                 isFullscreen ? "text-primary" : ""
               }`}
-              on:click={toggleFullscreen}
+              onclick={toggleFullscreen}
               class:animate-pulse={!isFullscreen}
               in:scale={{
                 start: 0.9,

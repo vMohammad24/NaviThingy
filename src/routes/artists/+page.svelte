@@ -28,22 +28,22 @@
     );
   }
 
-  let loading = true;
-  let error: string | null = null;
-  let indices: IndexID3[] = [];
-  let artists: ArtistID3[] = [];
-  let filteredArtists: ArtistID3[] = [];
-  let searchQuery = "";
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let indices = $state<IndexID3[]>([]);
+  let artists = $state<ArtistID3[]>([]);
+  let filteredArtists = $state<ArtistID3[]>([]);
+  let searchQuery = $state("");
 
   const stored = loadSettings();
-  let sortBy = stored.sortBy;
-  let sortDirection = stored.sortDirection;
+  let sortBy = $state(stored.sortBy);
+  let sortDirection = $state(stored.sortDirection);
 
-  $: {
+  $effect(() => {
     if (sortBy && sortDirection) {
       saveSettings();
     }
-  }
+  });
 
   async function loadArtists() {
     if (!$client) return;
@@ -95,9 +95,11 @@
     filterAndSortArtists();
   }
 
-  $: if (searchQuery !== undefined) {
-    filterAndSortArtists();
-  }
+  $effect(() => {
+    if (searchQuery !== undefined) {
+      filterAndSortArtists();
+    }
+  });
 
   onMount(async () => {
     await loadArtists();
@@ -115,13 +117,13 @@
     <div class="flex flex-wrap gap-2">
       <button
         class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        on:click={() => handleSort("name")}
+        onclick={() => handleSort("name")}
       >
         Name {sortBy === "name" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
       </button>
       <button
         class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        on:click={() => handleSort("albumCount")}
+        onclick={() => handleSort("albumCount")}
       >
         Albums {sortBy === "albumCount"
           ? sortDirection === "asc"

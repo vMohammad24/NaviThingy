@@ -3,11 +3,11 @@
   import Album from "$lib/components/Album.svelte";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
+  import { PlayCircle } from "@lucide/svelte";
   import type {
     ArtistInfo,
     ArtistWithAlbumsID3,
   } from "@vmohammad/subsonic-api";
-  import { PlayCircle } from "lucide-svelte";
   import { onMount } from "svelte";
 
   let loading = true;
@@ -76,7 +76,7 @@
           <h1 class="text-3xl font-bold">{artist.artist.name}</h1>
           <div class="flex flex-wrap items-center mt-2 gap-2">
             <button
-              on:click={playArtist}
+              onclick={playArtist}
               class="bg-primary text-text py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-opacity-80 transition-colors"
             >
               <PlayCircle size={16} />

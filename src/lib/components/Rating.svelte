@@ -1,12 +1,16 @@
 <script lang="ts">
   import { client } from "$lib/stores/client";
-  import { Star } from "lucide-svelte";
+  import { Star } from "@lucide/svelte";
 
-  export let id: string;
-  export let rating = 0;
-  export let compact = false;
+  interface Props {
+    id: string;
+    rating?: number;
+    compact?: boolean;
+  }
 
-  let hoverRating = 0;
+  let { id, rating = $bindable(0), compact = false }: Props = $props();
+
+  let hoverRating = $state(0);
 
   async function setRating(value: number) {
     if (!$client) return;
@@ -29,9 +33,9 @@
       {#each Array(5) as _, i}
         <button
           class="text-primary hover:scale-110 transition-transform p-1.5 sm:p-0.5 touch-manipulation"
-          on:mouseenter={() => (hoverRating = i + 1)}
-          on:mouseleave={() => (hoverRating = 0)}
-          on:click={(e) => {
+          onmouseenter={() => (hoverRating = i + 1)}
+          onmouseleave={() => (hoverRating = 0)}
+          onclick={(e) => {
             e.stopPropagation();
             setRating(i + 1);
           }}

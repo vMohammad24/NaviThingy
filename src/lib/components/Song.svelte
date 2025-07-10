@@ -3,7 +3,6 @@
   import { download } from "$lib/client/util";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
-  import type { Child } from "@vmohammad/subsonic-api";
   import {
     AlbumIcon,
     ArrowUpWideNarrow,
@@ -15,7 +14,8 @@
     Pause,
     Play,
     User,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
+  import type { Child } from "@vmohammad/subsonic-api";
   import ContextMenu from "./ContextMenu.svelte";
 
   let {
@@ -262,5 +262,5 @@
       icon: Download,
     },
   ]}
-  on:close={() => (contextMenu.show = false)}
+  onclose={() => (contextMenu.show = false)}
 />

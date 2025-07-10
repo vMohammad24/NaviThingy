@@ -21,7 +21,7 @@
     "@tauri-apps/plugin-updater": "~2",
     "@tauri-apps/plugin-window-state": "^2.2.1",
     "@vmohammad/subsonic-api": "3.1.5",
-    "lucide-svelte": "latest",
+    "@lucide/svelte": "latest",
     "svelte-french-toast": "2.0.0-alpha.0",
     "uuid": "latest"
   },

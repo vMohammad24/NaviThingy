@@ -11,7 +11,7 @@
     Tag,
     Users,
     X,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import { onDestroy, onMount } from "svelte";
 
   export let isOpen = !$isMobile;
@@ -139,7 +139,7 @@
             relative after:absolute after:inset-0 after:rounded-xl after:border after:border-white/10
             after:opacity-0 hover:after:opacity-100 after:transition-opacity
             hover:shadow-[0_0_20px_-3px_rgba(var(--color-primary-rgb),0.5)] active:scale-95"
-          on:click={() => (isOpen = !isOpen)}
+          onclick={() => (isOpen = !isOpen)}
           aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
         >
           {#if $isMobile}
@@ -159,7 +159,7 @@
         {#each navItems as item}
           <a
             href={item.href}
-            on:click={handleNavClick}
+            onclick={handleNavClick}
             class="group flex items-center gap-4 rounded-xl
               {isOpen ? 'p-3.5 hover:translate-x-1' : 'p-4 hover:scale-[1.02]'}
               text-base transition-all duration-500 relative overflow-hidden isolate touch-manipulation

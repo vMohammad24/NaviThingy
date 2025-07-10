@@ -3,8 +3,8 @@
   import Song from "$lib/components/Song.svelte";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
+  import { Play } from "@lucide/svelte";
   import type { Child } from "@vmohammad/subsonic-api";
-  import { Play } from "lucide-svelte";
   import { onMount } from "svelte";
 
   let loading = true;
@@ -55,7 +55,7 @@
           ></div>
           <button
             class="absolute bottom-4 right-4 p-3 rounded-full bg-primary text-background hover:opacity-90 transition-all"
-            on:click={() => playSong()}
+            onclick={() => playSong()}
           >
             <Play size={20} />
           </button>

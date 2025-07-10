@@ -2,8 +2,8 @@
   import { page } from "$app/state";
   import Album from "$lib/components/Album.svelte";
   import { client } from "$lib/stores/client";
+  import { Disc } from "@lucide/svelte";
   import type { Child } from "@vmohammad/subsonic-api";
-  import { Disc } from "lucide-svelte";
   import { onMount } from "svelte";
 
   interface AlbumViewSettings {
@@ -38,32 +38,33 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }
 
-  let loading = true;
-  let error: string | null = null;
+  let loading = $state(true);
+  let error = $state<string | null>(null);
 
-  let albums: Child[] = [];
-  let filteredAlbums: Child[] = [];
-  let currentPage = 0;
-  let totalAlbums = 0;
-  let searchQuery = "";
+  let albums = $state<Child[]>([]);
+  let filteredAlbums = $state<Child[]>([]);
+  let currentPage = $state(0);
+  let totalAlbums = $state(0);
+  let searchQuery = $state("");
 
   const stored = loadSettings();
-  let activeTab =
+  let activeTab = $state(
     (page.url.searchParams.get("activeTab") as
       | "newest"
       | "highest"
       | "frequent"
       | "recent"
-      | "favorites") ?? stored.activeTab;
-  let sortBy = stored.sortBy;
-  let sortDirection = stored.sortDirection;
-  let pageSize = stored.pageSize;
+      | "favorites") ?? stored.activeTab,
+  );
+  let sortBy = $state(stored.sortBy);
+  let sortDirection = $state(stored.sortDirection);
+  let pageSize = $state(stored.pageSize);
 
-  $: {
+  $effect(() => {
     if (activeTab && sortBy && sortDirection && pageSize) {
       saveSettings();
     }
-  }
+  });
 
   const tabs = [
     { id: "favorites", label: "Favorites" },
@@ -147,12 +148,14 @@
     loadAlbums();
   }
 
-  $: if (searchQuery !== undefined) {
-    filterAndSortAlbums();
-  }
+  $effect(() => {
+    if (searchQuery !== undefined) {
+      filterAndSortAlbums();
+    }
+  });
 
-  onMount(async () => {
-    await loadAlbums();
+  onMount(() => {
+    loadAlbums();
   });
 </script>
 
@@ -172,7 +175,7 @@
           class="px-3 py-2 rounded-lg whitespace-nowrap {activeTab === tab.id
             ? 'bg-primary text-text'
             : 'bg-surface hover:bg-surface-hover'}"
-          on:click={() => {
+          onclick={() => {
             activeTab = tab.id as typeof activeTab;
             loadAlbums();
           }}
@@ -193,13 +196,13 @@
     <div class="flex flex-wrap gap-2">
       <button
         class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        on:click={() => handleSort("name")}
+        onclick={() => handleSort("name")}
       >
         Name {sortBy === "name" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
       </button>
       <button
         class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        on:click={() => handleSort("artist")}
+        onclick={() => handleSort("artist")}
       >
         Artist {sortBy === "artist"
           ? sortDirection === "asc"
@@ -209,7 +212,7 @@
       </button>
       <button
         class="px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        on:click={() => handleSort("year")}
+        onclick={() => handleSort("year")}
       >
         Year {sortBy === "year" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
       </button>
@@ -250,7 +253,7 @@
         <select
           class="bg-surface-hover rounded px-2 py-1 w-full sm:w-auto"
           bind:value={pageSize}
-          on:change={() => changePageSize(pageSize)}
+          onchange={() => changePageSize(pageSize)}
         >
           <option value={25}>25 per page</option>
           <option value={50}>50 per page</option>
@@ -262,14 +265,14 @@
       <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
         <button
           class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50 w-full sm:w-auto"
-          on:click={() => changePage(-1)}
+          onclick={() => changePage(-1)}
           disabled={currentPage === 0}
         >
           Previous
         </button>
         <button
           class="px-4 py-2 rounded-lg bg-surface-hover disabled:opacity-50 w-full sm:w-auto"
-          on:click={() => changePage(1)}
+          onclick={() => changePage(1)}
           disabled={albums.length < pageSize}
         >
           Next

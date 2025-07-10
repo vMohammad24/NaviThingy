@@ -9,9 +9,8 @@
     sidebarOpen,
   } from "$lib/stores/sidebarOpen";
   import { theme } from "$lib/stores/theme";
+  import { Maximize, Menu, Minimize, X } from "@lucide/svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { Maximize, Menu, Minimize, X } from "lucide-svelte";
-  import { onMount } from "svelte";
   import { Toaster } from "svelte-french-toast";
 
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
@@ -20,11 +19,11 @@
   import { discordRPC } from "$lib/stores/discord";
   import "../app.css";
 
-  let showSearch = false;
+  let showSearch = $state(false);
   const appWindow = getCurrentWindow();
   discordRPC; // just to make sure it starts cuz i <3 svelte
 
-  onMount(() => {
+  $effect(() => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -37,34 +36,39 @@
     }
   }
 
-  $: currentTheme =
-    theme.themes.find((t) => t.id === $theme) || theme.themes[0];
-  $: if (currentTheme && typeof document !== "undefined") {
-    document.documentElement.style.setProperty(
-      "--color-primary",
-      currentTheme.colors.primary,
-    );
-    document.documentElement.style.setProperty(
-      "--color-secondary",
-      currentTheme.colors.secondary,
-    );
-    document.documentElement.style.setProperty(
-      "--color-background",
-      currentTheme.colors.background,
-    );
-    document.documentElement.style.setProperty(
-      "--color-surface",
-      currentTheme.colors.surface,
-    );
-    document.documentElement.style.setProperty(
-      "--color-text",
-      currentTheme.colors.text,
-    );
-    document.documentElement.style.setProperty(
-      "--color-text-secondary",
-      currentTheme.colors.textSecondary,
-    );
-  }
+  const { children } = $props();
+  let currentTheme = $derived(
+    theme.themes.find((t) => t.id === $theme) || theme.themes[0],
+  );
+
+  $effect(() => {
+    if (currentTheme && typeof document !== "undefined") {
+      document.documentElement.style.setProperty(
+        "--color-primary",
+        currentTheme.colors.primary,
+      );
+      document.documentElement.style.setProperty(
+        "--color-secondary",
+        currentTheme.colors.secondary,
+      );
+      document.documentElement.style.setProperty(
+        "--color-background",
+        currentTheme.colors.background,
+      );
+      document.documentElement.style.setProperty(
+        "--color-surface",
+        currentTheme.colors.surface,
+      );
+      document.documentElement.style.setProperty(
+        "--color-text",
+        currentTheme.colors.text,
+      );
+      document.documentElement.style.setProperty(
+        "--color-text-secondary",
+        currentTheme.colors.textSecondary,
+      );
+    }
+  });
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.ctrlKey && event.key === "k") {
@@ -90,7 +94,7 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if !$isMobile}
   <div
@@ -101,21 +105,21 @@
   >
     <button
       class="h-full w-10 flex items-center justify-center text-text-secondary/70 hover:bg-surface/90 hover:text-text transition-all duration-200 hover:scale-110"
-      on:click={minimize}
+      onclick={minimize}
       aria-label="Minimize"
     >
       <Minimize size={16} />
     </button>
     <button
       class="h-full w-10 flex items-center justify-center text-text-secondary/70 hover:bg-surface/90 hover:text-text transition-all duration-200 hover:scale-110"
-      on:click={maximize}
+      onclick={maximize}
       aria-label="Maximize"
     >
       <Maximize size={16} />
     </button>
     <button
       class="h-full w-10 flex items-center justify-center text-text-secondary/70 hover:bg-red-500 hover:text-text transition-colors"
-      on:click={close}
+      onclick={close}
       aria-label="Close"
     >
       <X size={16} />
@@ -132,7 +136,7 @@
     {#if $isMobile && $sidebarOpen}
       <div
         class="fixed inset-0 bg-black/50 z-20 backdrop-blur-sm transition-opacity duration-300"
-        on:click={() => ($sidebarOpen = false)}
+        onclick={() => ($sidebarOpen = false)}
         aria-hidden="true"
       ></div>
     {/if}
@@ -147,7 +151,7 @@
           class="rounded-xl p-2.5 hover:bg-primary/10 transition-all
             relative after:absolute after:inset-0 after:rounded-xl after:border after:border-white/10
             after:opacity-0 hover:after:opacity-100 after:transition-opacity active:scale-95"
-          on:click={toggleSidebar}
+          onclick={toggleSidebar}
           aria-label="Toggle menu"
         >
           <Menu size={24} />
@@ -165,7 +169,7 @@
 
     <Search bind:show={showSearch} />
     <main class="flex-1 p-4 mb-20 {$isMobile ? 'pt-2' : ''}">
-      <slot />
+      {@render children()}
     </main>
     <Queue />
     {#if $isMobile}

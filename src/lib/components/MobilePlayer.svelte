@@ -15,34 +15,33 @@
     Shuffle,
     SkipBack,
     SkipForward,
-  } from "lucide-svelte";
-  import { onDestroy, onMount } from "svelte";
+  } from "@lucide/svelte";
   import { cubicOut, quartInOut } from "svelte/easing";
   import { crossfade, fade, slide } from "svelte/transition";
   import Queue from "./Queue.svelte";
 
-  let isFullscreen = false;
-  let progress = 0;
-  let duration = 0;
-  let isProgressDragging = false;
-  let dragProgress = 0;
+  let isFullscreen = $state(false);
+  let progress = $state(0);
+  let duration = $state(0);
+  let isProgressDragging = $state(false);
+  let dragProgress = $state(0);
   let progressInterval: number;
-  let currentTrackId: string | null = null;
-  let lyrics:
-    | { synced: boolean; plain: string; lines: SyncedLyric[] }
-    | undefined;
-  let currentLyricIndex = -1;
-  let lyricsContainer: HTMLDivElement;
-  let currentLyricElement: HTMLParagraphElement | null = null;
-  let showQueueInFullscreen = false;
-  let showLyrics = false;
-  let isFavorite = false;
+  let currentTrackId = $state<string | null>(null);
+  let lyrics = $state<
+    { synced: boolean; plain: string; lines: SyncedLyric[] } | undefined
+  >();
+  let currentLyricIndex = $state(-1);
+  let lyricsContainer: HTMLDivElement | null = $state(null);
+  let currentLyricElement: HTMLParagraphElement | null = $state(null);
+  let showQueueInFullscreen = $state(false);
+  let showLyrics = $state(false);
+  let isFavorite = $state(false);
 
-  let touchStartY = 0;
-  let touchStartX = 0;
-  let initialTranslateY = 0;
-  let currentTranslateY = 0;
-  let isDraggingPanel = false;
+  let touchStartY = $state(0);
+  let touchStartX = $state(0);
+  let initialTranslateY = $state(0);
+  let currentTranslateY = $state(0);
+  let isDraggingPanel = $state(false);
   let swipeThreshold = 50;
 
   const animateProgressBar = true;
@@ -59,20 +58,26 @@
     },
   });
 
-  $: if ($player.currentTrack && $client && $player.isPlaying) {
-    if (currentTrackId !== $player.currentTrack.id) {
-      currentTrackId = $player.currentTrack.id;
-      scrollToCurrentLyric();
+  $effect(() => {
+    if ($player.currentTrack && $client && $player.isPlaying) {
+      if (currentTrackId !== $player.currentTrack.id) {
+        currentTrackId = $player.currentTrack.id;
+        scrollToCurrentLyric();
+      }
     }
-  }
+  });
 
-  $: if ($player.currentTrack) {
-    isFavorite = !!$player.currentTrack.starred;
-  }
+  $effect(() => {
+    if ($player.currentTrack) {
+      isFavorite = !!$player.currentTrack.starred;
+    }
+  });
 
-  $: if (isFullscreen && $player.currentTrack) {
-    fetchLyrics();
-  }
+  $effect(() => {
+    if (isFullscreen && $player.currentTrack) {
+      fetchLyrics();
+    }
+  });
 
   function handleProgressDragStart(e: TouchEvent) {
     isProgressDragging = true;
@@ -211,13 +216,17 @@
 
     setTimeout(() => {
       try {
-        const elements = lyricsContainer.querySelectorAll("p");
-        if (currentLyricIndex >= 0 && elements.length > currentLyricIndex) {
+        const elements = lyricsContainer?.querySelectorAll("p");
+        if (
+          currentLyricIndex >= 0 &&
+          elements &&
+          elements.length > currentLyricIndex
+        ) {
           currentLyricElement = elements[
             currentLyricIndex
           ] as HTMLParagraphElement;
 
-          if (currentLyricElement) {
+          if (currentLyricElement && lyricsContainer) {
             const containerHeight = lyricsContainer.clientHeight;
             const lyricTop = currentLyricElement.offsetTop;
             const lyricHeight = currentLyricElement.clientHeight;
@@ -251,7 +260,7 @@
     }, 16);
   }
 
-  onMount(() => {
+  $effect(() => {
     if (browser) {
       setupMediaSession();
       startProgressTracking();
@@ -260,10 +269,6 @@
     return () => {
       if (progressInterval) clearInterval(progressInterval);
     };
-  });
-
-  onDestroy(() => {
-    if (progressInterval) clearInterval(progressInterval);
   });
 </script>
 
@@ -296,7 +301,7 @@
   >
     <button
       class="absolute -top-8 right-3 p-1.5 rounded-t-lg bg-surface/90 text-white/70 hover:text-white/90 active:bg-white/10 transition-colors"
-      on:click={() => player.stop()}
+      onclick={() => player.stop()}
       aria-label="Close player"
     >
       <ChevronDown size={16} />
@@ -307,10 +312,10 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="absolute inset-0 z-0"
-      on:touchstart={handleTouchStart}
-      on:touchmove={handleTouchMove}
-      on:touchend={handleTouchEnd}
-      on:click={openFullscreen}
+      ontouchstart={handleTouchStart}
+      ontouchmove={handleTouchMove}
+      ontouchend={handleTouchEnd}
+      onclick={openFullscreen}
     ></div>
 
     <div
@@ -321,9 +326,9 @@
           <!-- Larger touch target area for better mobile interaction -->
           <div
             class="absolute inset-0 w-full h-8 -top-3"
-            on:touchstart|stopPropagation={handleProgressDragStart}
-            on:touchmove|stopPropagation={handleProgressDragMove}
-            on:touchend|stopPropagation={handleProgressDragEnd}
+            ontouchstart={handleProgressDragStart}
+            ontouchmove={handleProgressDragMove}
+            ontouchend={handleProgressDragEnd}
           ></div>
 
           <!-- Progress bar fill element with gradient instead of knob -->
@@ -343,7 +348,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="flex items-center gap-4 flex-1 min-w-0"
-          on:click|stopPropagation={openFullscreen}
+          onclick={openFullscreen}
         >
           <div class="relative h-12 w-12 rounded-lg overflow-hidden shadow-md">
             <img
@@ -369,7 +374,7 @@
         <div class="flex items-center gap-3">
           <button
             class="p-2 rounded-full text-white/70 hover:text-white/90 active:bg-white/10 transition-colors"
-            on:click|stopPropagation={() => player.previous()}
+            onclick={() => player.previous()}
             aria-label="Previous track"
           >
             <SkipBack size={20} />
@@ -377,7 +382,7 @@
 
           <button
             class="p-2.5 rounded-full bg-accent text-white/80 hover:text-white active:bg-accent/80 transition-colors shadow-sm"
-            on:click|stopPropagation={() => player.togglePlay()}
+            onclick={() => player.togglePlay()}
             aria-label={$player.isPlaying ? "Pause" : "Play"}
           >
             {#if $player.isPlaying}
@@ -389,7 +394,7 @@
 
           <button
             class="p-2 rounded-full text-white/70 hover:text-white/90 active:bg-white/10 transition-colors"
-            on:click|stopPropagation={() => player.next()}
+            onclick={() => player.next()}
             aria-label="Next track"
           >
             <SkipForward size={20} />
@@ -408,7 +413,7 @@
         <div class="flex items-center justify-between p-4">
           <button
             class="p-2 rounded-full bg-black/20 backdrop-blur-md hover:bg-black/30 active:bg-black/40 transition"
-            on:click={closeFullscreen}
+            onclick={closeFullscreen}
             aria-label="Close player"
           >
             <ChevronDown size={20} class="stroke-white/90" />
@@ -428,7 +433,7 @@
                 ? "bg-accent text-black"
                 : "bg-black/20 hover:bg-black/30 active:bg-black/40"
             }`}
-            on:click={toggleQueue}
+            onclick={toggleQueue}
             aria-label="Toggle queue"
           >
             <ListMusic size={18} />
@@ -477,7 +482,7 @@
                         ? `/artists/${$player.currentTrack.artistId}`
                         : "#"}
                       class="text-base text-white/80 hover:text-white transition truncate"
-                      on:click|preventDefault={() => {
+                      onclick={() => {
                         closeFullscreen();
                         if ($player.currentTrack) {
                           const artistId = $player.currentTrack.artistId;
@@ -498,7 +503,7 @@
                           ? `/albums/${$player.currentTrack.albumId}`
                           : "#"}
                         class="text-sm text-white/70 hover:text-white/90 transition truncate"
-                        on:click|preventDefault={() => {
+                        onclick={() => {
                           closeFullscreen();
                           if ($player.currentTrack) {
                             const albumId = $player.currentTrack.albumId;
@@ -522,9 +527,9 @@
               <div class="mt-2" in:fade={{ duration: 200, delay: 300 }}>
                 <div
                   class="relative h-1 bg-white/10 rounded-full overflow-hidden"
-                  on:touchstart|stopPropagation={handleProgressDragStart}
-                  on:touchmove|stopPropagation={handleProgressDragMove}
-                  on:touchend|stopPropagation={handleProgressDragEnd}
+                  ontouchstart={handleProgressDragStart}
+                  ontouchmove={handleProgressDragMove}
+                  ontouchend={handleProgressDragEnd}
                 >
                   <div
                     class="absolute inset-y-0 left-0 bg-accent transition-all {isProgressDragging
@@ -554,7 +559,7 @@
                       ? "text-accent"
                       : "text-white/60 hover:text-white/80"
                   }`}
-                  on:click={() => player.toggleShuffle()}
+                  onclick={() => player.toggleShuffle()}
                   aria-label="Toggle shuffle"
                 >
                   <Shuffle size={20} />
@@ -566,7 +571,7 @@
                       ? "text-accent"
                       : "text-white/60 hover:text-white/80"
                   }`}
-                  on:click={() => player.toggleRepeat()}
+                  onclick={() => player.toggleRepeat()}
                   aria-label="Toggle repeat"
                 >
                   {#if $player.repeat === "one"}
@@ -580,7 +585,7 @@
               <div class="flex items-center justify-center gap-8">
                 <button
                   class="p-3 rounded-full text-white/80 hover:text-white active:bg-white/10 transition"
-                  on:click={() => player.previous()}
+                  onclick={() => player.previous()}
                   aria-label="Previous track"
                 >
                   <SkipBack size={28} />
@@ -588,7 +593,7 @@
 
                 <button
                   class="p-4 rounded-full bg-accent text-white/80 hover:text-white active:bg-accent/80 transition shadow-lg"
-                  on:click={() => player.togglePlay()}
+                  onclick={() => player.togglePlay()}
                   aria-label={$player.isPlaying ? "Pause" : "Play"}
                 >
                   {#if $player.isPlaying}
@@ -600,7 +605,7 @@
 
                 <button
                   class="p-3 rounded-full text-white/80 hover:text-white active:bg-white/10 transition"
-                  on:click={() => player.next()}
+                  onclick={() => player.next()}
                   aria-label="Next track"
                 >
                   <SkipForward size={28} />
@@ -612,7 +617,7 @@
               <div class="mt-auto mb-4 w-full">
                 <button
                   class="w-full py-3.5 px-4 flex items-center justify-center gap-2 text-sm font-medium rounded-xl bg-accent/10 hover:bg-accent/15 active:bg-accent/20 transition-colors text-accent border border-accent/20"
-                  on:click={() => (showLyrics = !showLyrics)}
+                  onclick={() => (showLyrics = !showLyrics)}
                 >
                   <span class="tracking-wide">
                     {showLyrics ? "HIDE LYRICS" : "VIEW LYRICS"}
@@ -661,7 +666,7 @@
             </h3>
             <button
               class="p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
-              on:click={() => (showLyrics = !showLyrics)}
+              onclick={() => (showLyrics = !showLyrics)}
               aria-label="Close lyrics"
             >
               <ChevronDown size={18} class="text-white/70" />
@@ -684,7 +689,7 @@
                           ? "bg-accent/10 px-4 py-3 rounded-lg text-accent font-medium text-lg"
                           : "text-white/70 hover:text-white/90"
                       }`}
-                      on:click={() => seekToLyric(line.time)}
+                      onclick={() => seekToLyric(line.time)}
                       style="transition: transform 0.2s ease-out; transform: scale({i ===
                       currentLyricIndex
                         ? 1.02

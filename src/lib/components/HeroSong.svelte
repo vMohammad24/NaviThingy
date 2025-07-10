@@ -1,7 +1,6 @@
 <script lang="ts">
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
-  import type { Child } from "@vmohammad/subsonic-api";
   import {
     CalendarRange,
     Clock1,
@@ -10,17 +9,19 @@
     Pause,
     Play,
     SkipForward,
-  } from "lucide-svelte";
-  import { onMount } from "svelte";
+  } from "@lucide/svelte";
+  import type { Child } from "@vmohammad/subsonic-api";
   import { quintInOut } from "svelte/easing";
   import { blur, fly } from "svelte/transition";
 
-  let song: Child | null = null;
-  let loading = true;
-  let error: string | null = null;
-  let containerRef: HTMLDivElement;
+  let song = $state<Child | null>(null);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let containerRef: HTMLDivElement | null = $state(null);
 
-  $: isPlaying = $player.currentTrack?.id === song?.id && $player.isPlaying;
+  let isPlaying = $derived(
+    $player.currentTrack?.id === song?.id && $player.isPlaying,
+  );
 
   async function loadRandomSong() {
     if (!$client) return;
@@ -59,7 +60,7 @@
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
-  onMount(() => {
+  $effect(() => {
     loadRandomSong();
   });
 </script>
@@ -105,7 +106,7 @@
     </p>
     <button
       class="mt-6 px-6 sm:px-8 py-2 sm:py-3 bg-primary/15 hover:bg-primary/25 rounded-xl transition-all duration-300 mx-auto block font-medium hover:scale-105 relative"
-      on:click={loadRandomSong}
+      onclick={loadRandomSong}
     >
       Retry
     </button>
@@ -146,7 +147,7 @@
           <div class="flex items-center justify-center gap-6 w-full">
             <button
               class="p-4 sm:p-5 rounded-full bg-gradient-to-br from-primary/80 to-primary backdrop-blur-sm text-background hover:scale-110 hover:from-primary hover:to-primary-light active:scale-95 transition-all duration-300 shadow-lg hover:shadow-primary/30 hover:shadow-xl group"
-              on:click={togglePlay}
+              onclick={togglePlay}
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               <div
@@ -162,7 +163,7 @@
 
             <button
               class="p-3 sm:p-4 rounded-full bg-surface/40 backdrop-blur-md text-text-primary hover:scale-110 hover:bg-surface/60 active:scale-95 transition-all duration-300 shadow-lg hover:shadow-xl"
-              on:click={onNext}
+              onclick={onNext}
               aria-label="Skip to next song"
             >
               <SkipForward size={20} class="sm:w-6 sm:h-6" />
@@ -214,8 +215,7 @@
                 <div
                   class="text-xs uppercase tracking-wider text-text-secondary/60 group-hover:text-text-secondary/90 font-medium flex items-center gap-2 sm:gap-3 transition-all duration-500"
                 >
-                  <svelte:component
-                    this={item.icon}
+                  <item.icon
                     size={14}
                     class="sm:w-4 sm:h-4 opacity-60 group-hover:opacity-100 transition-all duration-500 group-hover:text-primary"
                   />

@@ -6,8 +6,8 @@
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
   import { selectedServer } from "$lib/stores/selectedServer";
+  import { Play } from "@lucide/svelte";
   import type { AlbumWithSongsID3, Child } from "@vmohammad/subsonic-api";
-  import { Play } from "lucide-svelte";
   import { onMount } from "svelte";
   let loading = true;
   let error: string | null = null;
@@ -76,7 +76,7 @@
           ></div>
           <button
             class="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 p-2 sm:p-3 rounded-full bg-primary text-background hover:opacity-90 transition-all"
-            on:click={() => playAlbum()}
+            onclick={() => playAlbum()}
           >
             <Play size={16} class="sm:hidden" />
             <Play size={20} class="hidden sm:block" />

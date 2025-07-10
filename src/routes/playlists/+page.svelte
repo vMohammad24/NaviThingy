@@ -2,17 +2,17 @@
   import { goto } from "$app/navigation";
   import { formatDate } from "$lib/client/util";
   import { client } from "$lib/stores/client";
+  import { ListMusic, Lock, Unlock } from "@lucide/svelte";
   import type { Playlist } from "@vmohammad/subsonic-api";
-  import { ListMusic, Lock, Unlock } from "lucide-svelte";
   import { onMount } from "svelte";
 
-  let playlists: Playlist[] = [];
-  let filteredPlaylists: Playlist[] = [];
-  let loading = true;
-  let error: string | null = null;
-  let newPlaylistName = "";
-  let showCreateDialog = false;
-  let searchQuery = "";
+  let playlists = $state<Playlist[]>([]);
+  let filteredPlaylists = $state<Playlist[]>([]);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let newPlaylistName = $state("");
+  let showCreateDialog = $state(false);
+  let searchQuery = $state("");
 
   onMount(async () => {
     loading = true;
@@ -33,7 +33,7 @@
       filteredPlaylists = playlists.filter(
         (playlist) =>
           playlist.name.toLowerCase().includes(query) ||
-          playlist.owner?.toLowerCase().includes(query)
+          playlist.owner?.toLowerCase().includes(query),
       );
     } else {
       filteredPlaylists = [...playlists];
@@ -54,9 +54,11 @@
     }
   }
 
-  $: if (searchQuery !== undefined) {
-    filterPlaylists();
-  }
+  $effect(() => {
+    if (searchQuery !== undefined) {
+      filterPlaylists();
+    }
+  });
 </script>
 
 <div class="container mx-auto p-4 space-y-6">
@@ -69,7 +71,7 @@
     </div>
     <button
       class="bg-primary text-surface px-4 py-2 rounded-lg hover:opacity-90 w-full sm:w-auto"
-      on:click={() => (showCreateDialog = true)}
+      onclick={() => (showCreateDialog = true)}
     >
       Create Playlist
     </button>
@@ -103,7 +105,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="bg-surface rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
-          on:click={() => goto(`/playlists/${playlist.id}`)}
+          onclick={() => goto(`/playlists/${playlist.id}`)}
         >
           <div class="aspect-square bg-background/50">
             {#if playlist.songCount && playlist.songCount > 0}
@@ -164,13 +166,13 @@
       <div class="flex justify-end gap-2">
         <button
           class="px-4 py-2 text-text-secondary hover:text-text"
-          on:click={() => (showCreateDialog = false)}
+          onclick={() => (showCreateDialog = false)}
         >
           Cancel
         </button>
         <button
           class="bg-primary text-surface px-4 py-2 rounded hover:opacity-90"
-          on:click={createPlaylist}
+          onclick={createPlaylist}
         >
           Create
         </button>

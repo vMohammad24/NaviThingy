@@ -5,7 +5,6 @@
   import Song from "$lib/components/Song.svelte";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
-  import type { PlaylistWithSongs } from "@vmohammad/subsonic-api";
   import {
     Clock,
     Edit,
@@ -17,27 +16,28 @@
     Trash2,
     Unlock,
     User,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
+  import type { PlaylistWithSongs } from "@vmohammad/subsonic-api";
   import { onMount } from "svelte";
   import { dndzone, SHADOW_ITEM_MARKER_PROPERTY_NAME } from "svelte-dnd-action";
 
   const playlistId = page.params.id;
-  let playlist: PlaylistWithSongs;
-  let isEditing = false;
-  let editName = "";
+  let playlist = $state<PlaylistWithSongs>();
+  let isEditing = $state(false);
+  let editName = $state("");
 
-  let dragItems: any[] = [];
-  $: dragItems =
+  let dragItems = $derived(
     playlist?.entry?.map((item) => ({
       ...item,
       [SHADOW_ITEM_MARKER_PROPERTY_NAME]: false,
-    })) || [];
+    })) || [],
+  );
 
-  let showAddSong = false;
-  let searchQuery = "";
-  let searchResults: any[] = [];
-  let searching = false;
-  let showDeleteConfirm = false;
+  let showAddSong = $state(false);
+  let searchQuery = $state("");
+  let searchResults = $state<any[]>([]);
+  let searching = $state(false);
+  let showDeleteConfirm = $state(false);
 
   onMount(async () => {
     playlist = await $client!.getPlaylist(playlistId);
@@ -50,7 +50,7 @@
   }
 
   async function updatePlaylist() {
-    if (editName !== playlist.name) {
+    if (editName !== playlist?.name) {
       await $client!.updatePlaylist(playlistId, { name: editName });
       await refreshPlaylist();
     }
@@ -65,7 +65,7 @@
   }
 
   function playPlaylist(startIndex = 0) {
-    if (playlist.entry) {
+    if (playlist?.entry) {
       player.setPlaylist(playlist.entry, startIndex);
     }
   }
@@ -84,13 +84,13 @@
 
   async function toggleVisibility() {
     await $client!.updatePlaylist(playlistId, {
-      public: !playlist.public,
+      public: !playlist?.public,
     });
     await refreshPlaylist();
   }
 
   function getTotalDuration() {
-    if (!playlist.entry) return 0;
+    if (!playlist?.entry) return 0;
     return playlist.entry.reduce((acc, song) => acc + (song.duration || 0), 0);
   }
 
@@ -109,13 +109,13 @@
 
   async function handleDndFinalize(e: CustomEvent<{ items: any[] }>) {
     const cleanItems = e.detail.items.map(
-      ({ [SHADOW_ITEM_MARKER_PROPERTY_NAME]: _, ...item }) => item
+      ({ [SHADOW_ITEM_MARKER_PROPERTY_NAME]: _, ...item }) => item,
     );
 
     const songIds = cleanItems.map((song) => song.id);
     const indices = Array.from(
-      { length: playlist.entry?.length || 0 },
-      (_, i) => i
+      { length: playlist?.entry?.length || 0 },
+      (_, i) => i,
     );
 
     await $client!.updatePlaylist(playlistId, {
@@ -131,7 +131,7 @@
 
   function debounce<T extends (...args: any[]) => void>(
     func: T,
-    wait: number
+    wait: number,
   ): (...args: Parameters<T>) => void {
     let timeout: NodeJS.Timeout;
     return (...args: Parameters<T>) => {
@@ -213,26 +213,26 @@
               {#if isEditing}
                 <button
                   class="bg-primary text-surface px-4 py-2 rounded hover:opacity-90"
-                  on:click={updatePlaylist}
+                  onclick={updatePlaylist}
                 >
                   Save
                 </button>
                 <button
                   class="text-text-secondary hover:text-text px-4 py-2"
-                  on:click={() => (isEditing = false)}
+                  onclick={() => (isEditing = false)}
                 >
                   Cancel
                 </button>
               {:else}
                 <button
                   class="text-text-secondary hover:text-text p-2"
-                  on:click={() => (isEditing = true)}
+                  onclick={() => (isEditing = true)}
                 >
                   <Edit size={20} />
                 </button>
                 <button
                   class="text-text-secondary hover:text-red-500 p-2"
-                  on:click={() => (showDeleteConfirm = true)}
+                  onclick={() => (showDeleteConfirm = true)}
                 >
                   <Trash2 size={20} />
                 </button>
@@ -245,8 +245,8 @@
               <span>Created by {playlist.owner}</span>
               <button
                 class="flex items-center gap-1 ml-2 hover:text-text"
-                on:click={toggleVisibility}
-                on:keydown={(e) => handleKeyDown(e, toggleVisibility)}
+                onclick={toggleVisibility}
+                onkeydown={(e) => handleKeyDown(e, toggleVisibility)}
               >
                 {#if playlist.public}
                   <Unlock size={16} />
@@ -274,16 +274,16 @@
               {#if playlist.entry?.length}
                 <button
                   class="bg-primary text-surface px-4 py-2 rounded hover:opacity-90 w-full sm:w-auto"
-                  on:click={() => playPlaylist()}
-                  on:keydown={(e) => handleKeyDown(e, () => playPlaylist())}
+                  onclick={() => playPlaylist()}
+                  onkeydown={(e) => handleKeyDown(e, () => playPlaylist())}
                 >
                   Play
                 </button>
               {/if}
               <button
                 class="bg-surface text-text-secondary px-4 py-2 rounded hover:text-primary hover:bg-surface/80 flex items-center gap-2 w-full sm:w-auto"
-                on:click={() => (showAddSong = true)}
-                on:keydown={(e) => handleKeyDown(e, () => (showAddSong = true))}
+                onclick={() => (showAddSong = true)}
+                onkeydown={(e) => handleKeyDown(e, () => (showAddSong = true))}
               >
                 <Plus size={20} />
                 Add Songs
@@ -307,8 +307,8 @@
               draggedEl.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
             },
           }}
-          on:consider={handleDndConsider}
-          on:finalize={handleDndFinalize}
+          onconsider={handleDndConsider}
+          onfinalize={handleDndFinalize}
           class="transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)]"
           role="list"
         >
@@ -346,7 +346,7 @@
             bind:value={searchQuery}
             placeholder="Search songs..."
             class="w-full p-2 pr-8 rounded bg-background text-text border border-white/10"
-            on:input={debouncedSearch}
+            oninput={debouncedSearch}
           />
           {#if searching}
             <Hourglass
@@ -366,7 +366,7 @@
         {#each searchResults as song}
           <button
             class="w-full flex items-center gap-3 p-2 hover:bg-primary/10 rounded group text-left"
-            on:click={() => addSong(song.id)}
+            onclick={() => addSong(song.id)}
           >
             <img
               src={song.coverArt}
@@ -399,13 +399,13 @@
     <div class="flex justify-end gap-4">
       <button
         class="px-4 py-2 text-text-secondary hover:text-text"
-        on:click={() => (showDeleteConfirm = false)}
+        onclick={() => (showDeleteConfirm = false)}
       >
         Cancel
       </button>
       <button
         class="px-4 py-2 bg-red-500 text-text rounded hover:bg-red-600"
-        on:click={handleDelete}
+        onclick={handleDelete}
       >
         Delete
       </button>

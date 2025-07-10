@@ -1,7 +1,7 @@
 <script lang="ts">
   import { client } from "$lib/stores/client";
+  import { Tag } from "@lucide/svelte";
   import type { Genre } from "@vmohammad/subsonic-api";
-  import { Tag } from "lucide-svelte";
   import { onMount } from "svelte";
 
   let genres = $state<Genre[]>([]);
@@ -16,7 +16,7 @@
       .filter(
         (genre) =>
           !searchQuery ||
-          genre.value.toLowerCase().includes(searchQuery.toLowerCase())
+          genre.value.toLowerCase().includes(searchQuery.toLowerCase()),
       )
       .sort((a, b) => {
         let comparison: number;
@@ -31,7 +31,7 @@
             comparison = a.value.localeCompare(b.value);
         }
         return sortDirection === "asc" ? comparison : -comparison;
-      })
+      }),
   );
 
   async function loadGenres() {

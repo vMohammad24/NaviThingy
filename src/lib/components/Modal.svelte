@@ -1,9 +1,20 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import { fade, scale } from "svelte/transition";
 
-  export let show = false;
-  export let maxWidth = "max-w-lg";
-  export let onClose: () => void = () => {};
+  interface Props {
+    show?: boolean;
+    maxWidth?: string;
+    onClose?: () => void;
+    children: Snippet;
+  }
+
+  let {
+    show = $bindable(false),
+    maxWidth = "max-w-lg",
+    onClose = () => {},
+    children,
+  }: Props = $props();
 
   function close() {
     show = false;
@@ -17,7 +28,7 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if show}
   <div
@@ -26,12 +37,12 @@
   >
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 bg-black bg-opacity-50" on:click={close}></div>
+    <div class="fixed inset-0 bg-black bg-opacity-50" onclick={close}></div>
     <div
       class="relative {maxWidth} w-full max-h-[90vh] overflow-y-auto rounded-lg"
       transition:scale={{ duration: 200, start: 0.5 }}
     >
-      <slot />
+      {@render children()}
     </div>
   </div>
 {/if}

@@ -8,18 +8,23 @@
     upcoming,
   } from "$lib/stores/queueStore";
   import { isMobile } from "$lib/stores/sidebarOpen";
-  import { GripVertical, Play, X } from "lucide-svelte";
+  import { GripVertical, Play, X } from "@lucide/svelte";
   import { dndzone, SHADOW_ITEM_MARKER_PROPERTY_NAME } from "svelte-dnd-action";
   import { backOut, cubicOut } from "svelte/easing";
   import { fly, scale, slide } from "svelte/transition";
 
-  export let minimal = false;
+  interface Props {
+    minimal?: boolean;
+  }
 
-  let dragItems: any[] = [];
-  $: dragItems = $upcoming.map((item) => ({
-    ...item,
-    [SHADOW_ITEM_MARKER_PROPERTY_NAME]: false,
-  }));
+  let { minimal = false }: Props = $props();
+
+  let dragItems = $derived(
+    $upcoming.map((item) => ({
+      ...item,
+      [SHADOW_ITEM_MARKER_PROPERTY_NAME]: false,
+    })),
+  );
 
   function handleDndConsider(e: CustomEvent<{ items: any[] }>) {
     dragItems = e.detail.items;
@@ -64,16 +69,16 @@
     }
   }
 
-  let isTouchDevice = false;
+  let isTouchDevice = $state(false);
 
   if (browser) {
     isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   }
 
-  let touchStartY = 0;
-  let initialTranslateY = 0;
-  let currentTranslateY = 0;
-  let isDraggingPanel = false;
+  let touchStartY = $state(0);
+  let initialTranslateY = $state(0);
+  let currentTranslateY = $state(0);
+  let isDraggingPanel = $state(false);
 
   function handleTouchStart(e: TouchEvent) {
     if (!minimal) {
@@ -117,9 +122,9 @@
       : "max-h-full overflow-y-auto scrollbar-none"
   } ${!minimal && !$queueVisible ? "translate-y-full md:translate-y-0 md:translate-x-full" : ""}`}
   style={isDraggingPanel ? `transform: translateY(${currentTranslateY}px)` : ""}
-  on:touchstart={handleTouchStart}
-  on:touchmove={handleTouchMove}
-  on:touchend={handleTouchEnd}
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
   in:fly={{ y: !minimal ? 30 : 0, duration: 400, easing: cubicOut }}
   out:fly={{ y: !minimal ? 30 : 0, duration: 300, easing: cubicOut }}
 >
@@ -145,7 +150,7 @@
       </div>
       <button
         class="p-2 rounded-full hover:bg-primary/15 transition-colors duration-200 hover:scale-105 active:scale-95"
-        on:click={queueActions.hide}
+        onclick={queueActions.hide}
         aria-label="Close queue"
       >
         <X size={20} />
@@ -166,11 +171,10 @@
         </div>
         <div class="opacity-60">
           {#each $history as track, i}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
               class="group flex items-center gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer transition-all duration-200 active:bg-primary/20 hover:scale-[1.01] active:scale-[0.99] md:px-6 md:py-3"
-              on:click={() => playHistoryTrack(i)}
-              on:keydown={(e) => handleKeyDown(e, () => playHistoryTrack(i))}
+              onclick={() => playHistoryTrack(i)}
+              onkeydown={(e) => handleKeyDown(e, () => playHistoryTrack(i))}
               role="button"
               tabindex="0"
               aria-label={`Play ${track.title} by ${track.artist} from history`}
@@ -295,8 +299,8 @@
               draggedEl.style.transition = "background-color 0.2s ease";
             },
           }}
-          on:consider={handleDndConsider}
-          on:finalize={handleDndFinalize}
+          onconsider={handleDndConsider}
+          onfinalize={handleDndFinalize}
           class="pb-6 transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] {!$isMobile &&
           !minimal
             ? 'md:grid md:grid-cols-1 md:gap-1'
@@ -343,11 +347,10 @@
                 </div>
               </div>
 
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
               <div
                 class="flex-1 min-w-0 cursor-pointer"
-                on:click={() => playTrack(i)}
-                on:keydown={(e) => handleKeyDown(e, () => playTrack(i))}
+                onclick={() => playTrack(i)}
+                onkeydown={(e) => handleKeyDown(e, () => playTrack(i))}
                 role="button"
                 tabindex="0"
                 aria-label={`Play ${track.title} by ${track.artist}`}
@@ -366,7 +369,7 @@
                 class="p-1.5 rounded-md {isTouchDevice
                   ? 'opacity-70'
                   : 'opacity-0 group-hover:opacity-60'} hover:opacity-100 hover:bg-primary/15 hover:text-primary transition-all duration-200 touch-manipulation md:opacity-60 md:p-2 hover:rotate-90 hover:scale-110 active:scale-90"
-                on:click={() => removeFromQueue(i)}
+                onclick={() => removeFromQueue(i)}
                 aria-label={`Remove ${track.title} from queue`}
               >
                 <X size={16} class="md:w-5 md:h-5" />

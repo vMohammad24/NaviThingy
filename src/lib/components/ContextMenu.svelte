@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { Icon } from "lucide-svelte";
-  import { createEventDispatcher } from "svelte";
+  import type { Icon } from "@lucide/svelte";
   import { fade } from "svelte/transition";
 
   type MenuItem = {
@@ -12,37 +11,52 @@
     props?: Record<string, any>;
   };
 
-  export let show = false;
-  export let x = 0;
-  export let y = 0;
-  export let items: MenuItem[] = [];
+  interface Props {
+    show?: boolean;
+    x?: number;
+    y?: number;
+    items?: MenuItem[];
+    onclose?: () => void;
+  }
 
-  const dispatch = createEventDispatcher();
+  let {
+    show = $bindable(false),
+    x = 0,
+    y = 0,
+    items = [],
+    onclose,
+  }: Props = $props();
 
   function handleClickOutside(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (show && !target.closest(".context-menu")) {
       show = false;
-      dispatch("close");
+      onclose?.();
     }
   }
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape" && show) {
       show = false;
-      dispatch("close");
+      onclose?.();
     }
   }
 
-  $: if (show) {
-    document.addEventListener("click", handleClickOutside);
-    document.addEventListener("keydown", handleKeydown);
-  } else {
-    document.removeEventListener("click", handleClickOutside);
-    document.removeEventListener("keydown", handleKeydown);
-  }
+  $effect(() => {
+    if (show) {
+      document.addEventListener("click", handleClickOutside);
+      document.addEventListener("keydown", handleKeydown);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+        document.removeEventListener("keydown", handleKeydown);
+      };
+    } else {
+      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("keydown", handleKeydown);
+    }
+  });
 
-  $: menuStyle = calculateMenuPosition(x, y);
+  let menuStyle = $derived(calculateMenuPosition(x, y));
 
   function calculateMenuPosition(x: number, y: number): string {
     const padding = 5;
@@ -82,23 +96,23 @@
           </div>
         {:else}
           <div class="w-full px-4 py-2 text-text flex items-center">
-            <svelte:component this={item.item} {...item.props || {}} />
+            <item.item {...item.props || {}} />
           </div>
         {/if}
       {:else}
         <button
           class="w-full px-4 py-2 text-left hover:opacity-80 transition-opacity text-text flex items-center gap-2"
-          on:click={() => {
+          onclick={() => {
             item.action?.();
             show = false;
-            dispatch("close");
+            onclose?.();
           }}
         >
           {#if item.icon}
             {#if typeof item.icon === "string"}
               <img src={item.icon} alt={item.label} class="w-5 h-5" />
             {:else}
-              <svelte:component this={item.icon} size={18} />
+              <item.icon size={18} />
             {/if}
           {/if}
           {item.label}

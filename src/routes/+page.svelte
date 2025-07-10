@@ -5,14 +5,14 @@
   import { servers } from "../lib/stores/servers";
   import type { NavidromeServer } from "../lib/types/navidrome";
 
-  let newServer: NavidromeServer = {
+  let newServer = $state<NavidromeServer>({
     id: "",
     name: "",
     url: "",
     username: "",
     password: "",
-  };
-  let rememberSelection = false;
+  });
+  let rememberSelection = $state(false);
 
   function handleSubmit() {
     if (
@@ -50,7 +50,7 @@
 
   <div class="rounded-lg p-6 mb-8 shadow-lg bg-surface">
     <h2 class="text-xl font-semibold mb-4">Add New Server</h2>
-    <form on:submit|preventDefault={handleSubmit} class="space-y-4">
+    <form onsubmit={handleSubmit} class="space-y-4">
       <input
         type="text"
         bind:value={newServer.name}
@@ -95,7 +95,7 @@
         </div>
         <div class="flex gap-3">
           <button
-            on:click={() => selectServer(server)}
+            onclick={() => selectServer(server)}
             class="px-4 py-2 rounded-lg font-medium transition-colors duration-200 text-background"
             class:bg-secondary={$selectedServer?.id === server.id}
             class:bg-primary={$selectedServer?.id !== server.id}
@@ -103,7 +103,7 @@
             {$selectedServer?.id === server.id ? "Selected" : "Select"}
           </button>
           <button
-            on:click={() => removeServer(server.id)}
+            onclick={() => removeServer(server.id)}
             class="px-4 py-2 rounded-lg font-medium transition-colors duration-200 bg-red-600 text-text hover:bg-red-700"
           >
             Remove

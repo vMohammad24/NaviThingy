@@ -14,7 +14,7 @@
 
   function debounce<T extends (...args: any[]) => void>(
     func: T,
-    wait: number
+    wait: number,
   ): (...args: Parameters<T>) => void {
     let timeout: NodeJS.Timeout;
     return (...args: Parameters<T>) => {
@@ -68,11 +68,11 @@
         bind:value={searchQuery}
         placeholder="Search for albums, artists, or songs..."
         class="w-full flex-grow p-3 rounded-lg bg-background text-text"
-        on:input={handleSearch}
+        oninput={handleSearch}
         autofocus
       />
       <button
-        on:click={close}
+        onclick={close}
         class="px-4 py-2 rounded-lg bg-primary text-background w-full sm:w-auto"
       >
         Close
@@ -95,7 +95,7 @@
                 <a
                   class="p-2 rounded-lg hover:bg-primary/10 flex items-center gap-3 transition-colors"
                   href={`/artists/${artist.id}`}
-                  on:click={close}
+                  onclick={close}
                 >
                   <div
                     class="w-12 h-12 rounded-full bg-surface-hover flex-shrink-0 overflow-hidden"
@@ -130,7 +130,7 @@
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
                   class="p-2 rounded-lg hover:bg-primary/10 cursor-pointer flex items-center gap-3 transition-colors"
-                  on:click={() => navigateToAlbum(album.id)}
+                  onclick={() => navigateToAlbum(album.id)}
                 >
                   <div
                     class="w-12 h-12 rounded bg-surface-hover flex-shrink-0 overflow-hidden"
@@ -169,7 +169,7 @@
                 <a
                   class="p-2 rounded-lg hover:bg-primary/10 flex items-center gap-3 transition-colors"
                   href={`/songs/${song.id}`}
-                  on:click={close}
+                  onclick={close}
                 >
                   <div
                     class="w-12 h-12 rounded bg-surface-hover flex-shrink-0 overflow-hidden"

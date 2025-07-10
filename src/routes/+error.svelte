@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { Home } from "lucide-svelte";
+  import { Home } from "@lucide/svelte";
 </script>
 
 <div

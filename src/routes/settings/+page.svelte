@@ -9,44 +9,44 @@
   import { isMobile } from "$lib/stores/sidebarOpen";
   import { theme } from "$lib/stores/theme";
   import type { Theme } from "$lib/types/theme";
+  import { X } from "@lucide/svelte";
   import { getTauriVersion, getVersion } from "@tauri-apps/api/app";
   import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
   import { platform } from "@tauri-apps/plugin-os";
   import { relaunch } from "@tauri-apps/plugin-process";
   import { check } from "@tauri-apps/plugin-updater";
-  import { X } from "lucide-svelte";
   import { onMount } from "svelte";
   import toast from "svelte-french-toast";
-  $: currentTheme = theme.themes.find((t) => t.id === $theme);
-  $: os = platform();
-  let customTheme = { ...currentTheme, name: "" };
-  let showCustomThemeEditor = false;
-  let importUrl = "";
+  let currentTheme = $derived(theme.themes.find((t) => t.id === $theme));
+  let os = platform();
+  let customTheme = $derived({ ...currentTheme, name: "" });
+  let showCustomThemeEditor = $state(false);
+  let importUrl = $state("");
   let fileInput: HTMLInputElement;
-  let tauriVersion = "";
-  let version = "";
-  let autostartEnabled = false;
-  let contextMenu = {
+  let tauriVersion = $state("");
+  let version = $state("");
+  let autostartEnabled = $state(false);
+  let contextMenu = $state({
     show: false,
     x: 0,
     y: 0,
     theme: null as Theme | null,
-  };
-  let mpvPathInput = $mpvSettings.customPath;
-  let mpvEnabled = $mpvSettings.enabled;
-  let mpvFileInput: HTMLInputElement;
-  let isCreating = false;
-  let checking = false;
-  let updateAvailable = false;
-  let updateError: string | null = null;
-  let downloadProgress = {
+  });
+  let mpvPathInput = $state($mpvSettings.customPath);
+  let mpvEnabled = $state($mpvSettings.enabled);
+  let mpvFileInput: HTMLInputElement | null = $state(null);
+  let isCreating = $state(false);
+  let checking = $state(false);
+  let updateAvailable = $state(false);
+  let updateError: string | null = $state(null);
+  let downloadProgress = $state({
     downloaded: 0,
     total: 0,
     status: null as "Started" | "Progress" | "Finished" | null,
-  };
-  let lastfmApiKey = $lastfm;
-  let discordRpcEnabled = $discordRPC;
-  let lyricsSource = localStorage.getItem("lyricsSource") || "external";
+  });
+  let lastfmApiKey = $state($lastfm);
+  let discordRpcEnabled = $state($discordRPC);
+  let lyricsSource = $state(localStorage.getItem("lyricsSource") || "external");
 
   onMount(async () => {
     tauriVersion = await getTauriVersion();
@@ -291,7 +291,7 @@
             class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {autostartEnabled
               ? 'bg-primary text-background'
               : 'bg-surface'}"
-            on:click={async () => {
+            onclick={async () => {
               toast.promise(toggleAutoStart(), {
                 loading: "Updating autostart...",
                 success: (msg) => msg,
@@ -317,7 +317,7 @@
           class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {$player.scrobble
             ? 'bg-primary text-background'
             : 'bg-surface'}"
-          on:click={() => player.toggleScrobble()}
+          onclick={() => player.toggleScrobble()}
         >
           {$player.scrobble ? "Enabled" : "Disabled"}
         </button>
@@ -337,7 +337,7 @@
             .replayGain.enabled
             ? 'bg-primary text-background'
             : 'bg-surface'}"
-          on:click={() =>
+          onclick={() =>
             player.setReplayGainEnabled(!$player.replayGain.enabled)}
         >
           {$player.replayGain.enabled ? "Enabled" : "Disabled"}
@@ -357,7 +357,7 @@
           <select
             class="px-3 py-1 rounded-lg text-sm font-medium bg-background text-text border border-surface w-full sm:w-auto"
             bind:value={lyricsSource}
-            on:change={saveLyricsSource}
+            onchange={saveLyricsSource}
           >
             <option value="external">vMohammad API (Enhanced)</option>
             <option value="embedded">Embedded/LRCLib</option>
@@ -384,7 +384,7 @@
           class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {mpvEnabled
             ? 'bg-primary text-background'
             : 'bg-surface'}"
-          on:click={toggleMpv}
+          onclick={toggleMpv}
         >
           {mpvEnabled ? "Enabled" : "Disabled"}
         </button>
@@ -414,17 +414,17 @@
               class="hidden"
               accept={os === "windows" ? ".exe" : ""}
               bind:this={mpvFileInput}
-              on:change={handleMpvFileSelect}
+              onchange={handleMpvFileSelect}
             />
             <button
               class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background"
-              on:click={() => mpvFileInput.click()}
+              onclick={() => mpvFileInput?.click()}
             >
               Browse
             </button>
             <button
               class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background"
-              on:click={saveMpvPath}
+              onclick={saveMpvPath}
             >
               Save
             </button>
@@ -467,7 +467,7 @@
                   class="px-3 py-1 rounded-lg text-xs font-medium transition-all w-full sm:w-auto {$mpvSettings.preciseSeek
                     ? 'bg-primary text-background'
                     : 'bg-surface'}"
-                  on:click={() =>
+                  onclick={() =>
                     player.setPreciseSeek(!$mpvSettings.preciseSeek)}
                 >
                   {$mpvSettings.preciseSeek ? "Enabled" : "Disabled"}
@@ -487,7 +487,7 @@
                   class="px-3 py-1 rounded-lg text-xs font-medium transition-all w-full sm:w-auto {$mpvSettings.nativePlaylist
                     ? 'bg-primary text-background'
                     : 'bg-surface'}"
-                  on:click={() =>
+                  onclick={() =>
                     player.setMpvPlaylistOptions(!$mpvSettings.nativePlaylist)}
                 >
                   {$mpvSettings.nativePlaylist ? "Enabled" : "Disabled"}
@@ -510,7 +510,7 @@
                     step="1"
                     class="flex-1"
                     value={$mpvSettings.cacheSize}
-                    on:change={(e) => {
+                    onchange={(e) => {
                       const value = parseInt(e.currentTarget.value);
                       localStorage.setItem("mpvCacheSize", value.toString());
                       mpvSettings.update((s) => ({ ...s, cacheSize: value }));
@@ -544,14 +544,14 @@
               server.id
                 ? 'bg-primary text-background'
                 : 'bg-surface'}"
-              on:click={() => handleServerSwitch(server.id)}
+              onclick={() => handleServerSwitch(server.id)}
               disabled={$selectedServer?.id === server.id}
             >
               {$selectedServer?.id === server.id ? "Current" : "Switch"}
             </button>
             <button
               class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20 w-full sm:w-auto"
-              on:click={() => handleServerRemove(server.id)}
+              onclick={() => handleServerRemove(server.id)}
             >
               Remove
             </button>
@@ -576,13 +576,13 @@
       <div class="flex gap-2 w-full sm:w-auto">
         <button
           class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 w-1/2 sm:w-auto"
-          on:click={handleCreateTheme}
+          onclick={handleCreateTheme}
         >
           Create Theme
         </button>
         <button
           class="px-3 py-1 rounded-lg text-sm font-medium bg-surface border border-primary hover:opacity-90 w-1/2 sm:w-auto"
-          on:click={() => fileInput.click()}
+          onclick={() => fileInput.click()}
         >
           Import File
         </button>
@@ -594,7 +594,7 @@
       accept=".json"
       class="hidden"
       bind:this={fileInput}
-      on:change={handleFileUpload}
+      onchange={handleFileUpload}
     />
 
     <div class="mb-4">
@@ -607,7 +607,7 @@
         />
         <button
           class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 w-full sm:w-auto"
-          on:click={importThemeFromUrl}
+          onclick={importThemeFromUrl}
         >
           Import
         </button>
@@ -623,8 +623,8 @@
           style:border={t.id === $theme
             ? `2px solid ${t.colors.primary}`
             : "none"}
-          on:click={() => handleThemeClick(t)}
-          on:contextmenu={(e) => handleContextMenu(e, t)}
+          onclick={() => handleThemeClick(t)}
+          oncontextmenu={(e) => handleContextMenu(e, t)}
         >
           <div class="flex flex-col gap-2">
             <span class="font-medium truncate">{t.name}</span>
@@ -666,7 +666,7 @@
               : []),
           ]
         : []}
-      on:close={() => (contextMenu.show = false)}
+      onclose={() => (contextMenu.show = false)}
     />
 
     <Modal
@@ -681,7 +681,7 @@
           </h3>
           <button
             class="p-2 hover:bg-background/50 rounded-full"
-            on:click={() => (showCustomThemeEditor = false)}
+            onclick={() => (showCustomThemeEditor = false)}
           >
             <X size={24} />
           </button>
@@ -792,7 +792,7 @@
         >
           <button
             class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-background/50"
-            on:click={() => (showCustomThemeEditor = false)}
+            onclick={() => (showCustomThemeEditor = false)}
           >
             Cancel
           </button>
@@ -800,7 +800,7 @@
             class="px-4 py-2 rounded-lg text-sm font-medium"
             style="background-color: {customTheme.colors
               .primary}; color: {customTheme.colors.background}"
-            on:click={handleThemeSave}
+            onclick={handleThemeSave}
             disabled={!customTheme.name}
           >
             Save Theme
@@ -826,7 +826,7 @@
           class="px-3 py-1 rounded-lg text-sm font-medium transition-all w-full sm:w-auto {$discordRPC
             ? 'bg-primary text-background'
             : 'bg-surface'}"
-          on:click={toggleDiscordRPC}
+          onclick={toggleDiscordRPC}
         >
           {$discordRPC ? "Enabled" : "Disabled"}
         </button>
@@ -856,13 +856,13 @@
             <div class="flex gap-2 w-full sm:w-auto">
               <button
                 class="px-3 py-1 rounded-lg text-sm font-medium bg-primary text-background hover:opacity-90 flex-1 sm:flex-initial"
-                on:click={saveLastfmApiKey}
+                onclick={saveLastfmApiKey}
               >
                 Save
               </button>
               <button
                 class="px-3 py-1 rounded-lg text-sm font-medium bg-surface hover:bg-red-500/20 flex-1 sm:flex-initial"
-                on:click={clearLastfmApiKey}
+                onclick={clearLastfmApiKey}
               >
                 Clear
               </button>
@@ -894,7 +894,7 @@
             : updateAvailable
               ? 'bg-green-500 text-background'
               : 'bg-primary text-background'}"
-          on:click={handleUpdateClick}
+          onclick={handleUpdateClick}
           disabled={checking || downloadProgress.status !== null}
         >
           {#if downloadProgress.status === "Started"}

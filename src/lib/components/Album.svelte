@@ -2,7 +2,6 @@
   import { download } from "$lib/client/util";
   import { client } from "$lib/stores/client";
   import { player } from "$lib/stores/player";
-  import type { Child } from "@vmohammad/subsonic-api";
   import {
     ArrowUpWideNarrow,
     Download,
@@ -10,33 +9,37 @@
     HeartCrack,
     Pause,
     Play,
-  } from "lucide-svelte";
-  import { createEventDispatcher } from "svelte";
+  } from "@lucide/svelte";
+  import type { Child } from "@vmohammad/subsonic-api";
   import { quintOut } from "svelte/easing";
   import { scale } from "svelte/transition";
   import ContextMenu from "./ContextMenu.svelte";
 
-  export let album: Child;
-  export let showMetadata = true;
-  $: isPlaying = $player.currentTrack?.id === album.id && $player.isPlaying;
+  interface Props {
+    album: Child;
+    showMetadata?: boolean;
+    onupdate?: (album: Child) => void;
+  }
 
-  let contextMenu = {
+  let { album, showMetadata = true, onupdate }: Props = $props();
+
+  let isPlaying = $derived(
+    $player.currentTrack?.id === album.id && $player.isPlaying,
+  );
+
+  let contextMenu = $state({
     show: false,
     x: 0,
     y: 0,
-  };
-
-  const dispatch = createEventDispatcher();
+  });
 
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
-    contextMenu = {
-      show: true,
-      x: e.clientX,
-      y: e.clientY,
-    };
+    contextMenu.show = true;
+    contextMenu.x = e.clientX;
+    contextMenu.y = e.clientY;
   }
-  let show = true;
+  let show = $state(true);
 
   function reloadComponent() {
     show = false;
@@ -66,10 +69,10 @@
       case "favorite":
         if (album.starred) {
           await $client.unstar(album.id, "track");
-          dispatch("update", { ...album, starred: null });
+          onupdate?.({ ...album, starred: undefined });
         } else {
           await $client.star(album.id, "album");
-          dispatch("update", { ...album, starred: new Date() });
+          onupdate?.({ ...album, starred: new Date() });
         }
         break;
     }
@@ -91,7 +94,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="group relative" on:contextmenu={handleContextMenu}>
+<div class="group relative" oncontextmenu={handleContextMenu}>
   <div
     class="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-90 -z-10 transition-all duration-500 opacity-0 group-hover:opacity-100 group-hover:scale-110"
   ></div>
@@ -115,7 +118,7 @@
           {#if isPlaying || $player.currentTrack?.id === album.id}
             <button
               class="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 p-2 sm:p-4 rounded-full bg-primary text-background hover:scale-110 active:scale-95 transition-all shadow-lg"
-              on:click={togglePlay}
+              onclick={togglePlay}
             >
               {#if isPlaying}
                 <Pause class="w-5 h-5 sm:w-6 sm:h-6" />
@@ -164,7 +167,7 @@
 </div>
 
 <ContextMenu
-  bind:show={contextMenu.show}
+  show={contextMenu.show}
   x={contextMenu.x}
   y={contextMenu.y}
   items={[
@@ -191,5 +194,5 @@
       icon: Download,
     },
   ]}
-  on:close={() => (contextMenu.show = false)}
+  onclose={() => (contextMenu.show = false)}
 />
