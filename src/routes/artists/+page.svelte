@@ -1,181 +1,168 @@
 <script lang="ts">
-  import { client } from "$lib/stores/client";
-  import type { ArtistID3, IndexID3 } from "@vmohammad/subsonic-api";
-  import { onMount } from "svelte";
+	import { client } from '$lib/stores/client';
+	import type { ArtistID3, IndexID3 } from '@vmohammad/subsonic-api';
+	import { onMount } from 'svelte';
 
-  interface ArtistViewSettings {
-    sortBy: "name" | "albumCount";
-    sortDirection: "asc" | "desc";
-  }
+	interface ArtistViewSettings {
+		sortBy: 'name' | 'albumCount';
+		sortDirection: 'asc' | 'desc';
+	}
 
-  const STORAGE_KEY = "artist_view_settings";
+	const STORAGE_KEY = 'artist_view_settings';
 
-  function loadSettings(): ArtistViewSettings {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return {
-      sortBy: "name",
-      sortDirection: "asc",
-    };
-  }
+	function loadSettings(): ArtistViewSettings {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		if (stored) {
+			return JSON.parse(stored);
+		}
+		return {
+			sortBy: 'name',
+			sortDirection: 'asc'
+		};
+	}
 
-  function saveSettings() {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ sortBy, sortDirection }),
-    );
-  }
+	function saveSettings() {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify({ sortBy, sortDirection }));
+	}
 
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let indices = $state<IndexID3[]>([]);
-  let artists = $state<ArtistID3[]>([]);
-  let filteredArtists = $state<ArtistID3[]>([]);
-  let searchQuery = $state("");
+	let loading = $state(true);
+	let error = $state<string | null>(null);
+	let indices = $state<IndexID3[]>([]);
+	let artists = $state<ArtistID3[]>([]);
+	let filteredArtists = $state<ArtistID3[]>([]);
+	let searchQuery = $state('');
 
-  const stored = loadSettings();
-  let sortBy = $state(stored.sortBy);
-  let sortDirection = $state(stored.sortDirection);
+	const stored = loadSettings();
+	let sortBy = $state(stored.sortBy);
+	let sortDirection = $state(stored.sortDirection);
 
-  $effect(() => {
-    if (sortBy && sortDirection) {
-      saveSettings();
-    }
-  });
+	$effect(() => {
+		if (sortBy && sortDirection) {
+			saveSettings();
+		}
+	});
 
-  async function loadArtists() {
-    if (!$client) return;
-    loading = true;
-    error = null;
-    try {
-      const result = await $client.getArtists();
-      indices = result.index || [];
-      artists = indices.flatMap((index) => index.artist || []);
-      filterAndSortArtists();
-      loading = false;
-    } catch (e) {
-      error = "Failed to load artists";
-      loading = false;
-    }
-  }
+	async function loadArtists() {
+		if (!$client) return;
+		loading = true;
+		error = null;
+		try {
+			const result = await $client.getArtists();
+			indices = result.index || [];
+			artists = indices.flatMap((index) => index.artist || []);
+			filterAndSortArtists();
+			loading = false;
+		} catch (e) {
+			error = 'Failed to load artists';
+			loading = false;
+		}
+	}
 
-  function filterAndSortArtists() {
-    filteredArtists = [...artists];
+	function filterAndSortArtists() {
+		filteredArtists = [...artists];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filteredArtists = filteredArtists.filter((artist) =>
-        artist.name.toLowerCase().includes(query),
-      );
-    }
+		if (searchQuery) {
+			const query = searchQuery.toLowerCase();
+			filteredArtists = filteredArtists.filter((artist) =>
+				artist.name.toLowerCase().includes(query)
+			);
+		}
 
-    filteredArtists.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "albumCount":
-          comparison = a.albumCount - b.albumCount;
-          break;
-      }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-  }
+		filteredArtists.sort((a, b) => {
+			let comparison = 0;
+			switch (sortBy) {
+				case 'name':
+					comparison = a.name.localeCompare(b.name);
+					break;
+				case 'albumCount':
+					comparison = a.albumCount - b.albumCount;
+					break;
+			}
+			return sortDirection === 'asc' ? comparison : -comparison;
+		});
+	}
 
-  function handleSort(newSortBy: typeof sortBy) {
-    if (sortBy === newSortBy) {
-      sortDirection = sortDirection === "asc" ? "desc" : "asc";
-    } else {
-      sortBy = newSortBy;
-      sortDirection = "asc";
-    }
-    filterAndSortArtists();
-  }
+	function handleSort(newSortBy: typeof sortBy) {
+		if (sortBy === newSortBy) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortBy = newSortBy;
+			sortDirection = 'asc';
+		}
+		filterAndSortArtists();
+	}
 
-  $effect(() => {
-    if (searchQuery !== undefined) {
-      filterAndSortArtists();
-    }
-  });
+	$effect(() => {
+		if (searchQuery !== undefined) {
+			filterAndSortArtists();
+		}
+	});
 
-  onMount(async () => {
-    await loadArtists();
-  });
+	onMount(async () => {
+		await loadArtists();
+	});
 </script>
 
 <div class="container mx-auto px-4 py-6 space-y-6">
-  <div class="flex flex-col sm:flex-row gap-4 mb-6">
-    <input
-      type="text"
-      placeholder="Search artists..."
-      class="flex-1 px-4 py-2 rounded-lg bg-surface"
-      bind:value={searchQuery}
-    />
-    <div class="flex flex-wrap gap-2">
-      <button
-        class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        onclick={() => handleSort("name")}
-      >
-        Name {sortBy === "name" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
-      </button>
-      <button
-        class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
-        onclick={() => handleSort("albumCount")}
-      >
-        Albums {sortBy === "albumCount"
-          ? sortDirection === "asc"
-            ? "↑"
-            : "↓"
-          : ""}
-      </button>
-    </div>
-  </div>
+	<div class="flex flex-col sm:flex-row gap-4 mb-6">
+		<input
+			type="text"
+			placeholder="Search artists..."
+			class="flex-1 px-4 py-2 rounded-lg bg-surface"
+			bind:value={searchQuery}
+		/>
+		<div class="flex flex-wrap gap-2">
+			<button
+				class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
+				onclick={() => handleSort('name')}
+			>
+				Name {sortBy === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+			</button>
+			<button
+				class="px-4 py-2 rounded-lg bg-surface hover:bg-surface-hover whitespace-nowrap"
+				onclick={() => handleSort('albumCount')}
+			>
+				Albums {sortBy === 'albumCount' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+			</button>
+		</div>
+	</div>
 
-  {#if loading}
-    <div class="flex justify-center items-center h-64">
-      <div
-        class="animate-spin rounded-full h-12 w-12 border-4 border-primary"
-      ></div>
-    </div>
-  {:else if error}
-    <div class="text-center p-8 rounded-lg bg-surface">
-      <p class="text-text-secondary">{error}</p>
-    </div>
-  {:else}
-    <div
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-    >
-      {#each filteredArtists as artist}
-        <a
-          href="/artists/{artist.id}"
-          class="block p-4 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
-        >
-          <div
-            class="aspect-square mb-2 bg-surface-hover rounded-lg overflow-hidden"
-          >
-            {#if artist.artistImageUrl || artist.coverArt}
-              <img
-                src={artist.artistImageUrl || artist.coverArt}
-                alt={artist.name}
-                class="w-full h-full object-cover"
-              />
-            {:else}
-              <div
-                class="w-full h-full flex items-center justify-center text-4xl text-text-secondary"
-              >
-                🎵
-              </div>
-            {/if}
-          </div>
-          <h3 class="font-medium truncate">{artist.name}</h3>
-          <p class="text-sm text-text-secondary">
-            {artist.albumCount} album{artist.albumCount === 1 ? "" : "s"}
-          </p>
-        </a>
-      {/each}
-    </div>
-  {/if}
+	{#if loading}
+		<div class="flex justify-center items-center h-64">
+			<div class="animate-spin rounded-full h-12 w-12 border-4 border-primary"></div>
+		</div>
+	{:else if error}
+		<div class="text-center p-8 rounded-lg bg-surface">
+			<p class="text-text-secondary">{error}</p>
+		</div>
+	{:else}
+		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+			{#each filteredArtists as artist}
+				<a
+					href="/artists/{artist.id}"
+					class="block p-4 rounded-lg bg-surface hover:bg-surface-hover transition-colors"
+				>
+					<div class="aspect-square mb-2 bg-surface-hover rounded-lg overflow-hidden">
+						{#if artist.artistImageUrl || artist.coverArt}
+							<img
+								src={artist.artistImageUrl || artist.coverArt}
+								alt={artist.name}
+								class="w-full h-full object-cover"
+							/>
+						{:else}
+							<div
+								class="w-full h-full flex items-center justify-center text-4xl text-text-secondary"
+							>
+								🎵
+							</div>
+						{/if}
+					</div>
+					<h3 class="font-medium truncate">{artist.name}</h3>
+					<p class="text-sm text-text-secondary">
+						{artist.albumCount} album{artist.albumCount === 1 ? '' : 's'}
+					</p>
+				</a>
+			{/each}
+		</div>
+	{/if}
 </div>

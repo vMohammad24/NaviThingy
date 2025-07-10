@@ -1,5 +1,5 @@
 # https://github.com/tauri-apps/tauri-action
-name: "publish"
+name: 'publish'
 
 on:
   push:
@@ -16,14 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # for Arm based macs (M1 and above).
-            args: "--target aarch64-apple-darwin"
-          - platform: "macos-latest" # for Intel based macs.
-            args: "--target x86_64-apple-darwin"
-          - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
-            args: ""
-          - platform: "windows-latest"
-            args: ""
+          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
           # - platform: "android"
           #   args: ""
 
@@ -60,7 +60,7 @@ jobs:
         if: steps.changed_src_files.outputs.any_changed == 'true'
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
+          workspaces: './src-tauri -> target'
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04' && steps.changed_src_files.outputs.any_changed == 'true'
@@ -81,8 +81,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: NaviThingy__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: "NaviThingy v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          releaseName: 'NaviThingy v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
