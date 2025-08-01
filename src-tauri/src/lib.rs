@@ -23,6 +23,7 @@ pub fn run() {
     let discord_client = Arc::new(Mutex::new(DiscordClient::new()));
 
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .manage(mpv_player.clone())
         .manage(discord_client.clone())
         .invoke_handler(tauri::generate_handler![

@@ -1,3 +1,4 @@
+import { fetch } from '@tauri-apps/plugin-http';
 import { SubsonicAPI, type AlbumList, type Child, type Genre } from '@vmohammad/subsonic-api';
 import type { LRCLIBResponse, LyricsResult, NavidromeServer, SyncedLyric } from './types/navidrome';
 
