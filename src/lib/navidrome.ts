@@ -105,14 +105,19 @@ export class NavidromeClient {
 
 	async getAlbumDetails(id: string) {
 		const { album } = await this.api.getAlbum({ id });
+
+		let albumCoverArt: string | undefined;
+		if (album.coverArt) {
+			albumCoverArt = await this.getCoverURL(album.coverArt ?? id);
+			album.coverArt = albumCoverArt;
+		}
+
 		if (album.song) {
-			album.song = await this.sanitizeChildren(album.song);
+			album.song = await this.sanitizeChildren(album.song, albumCoverArt);
 		} else {
 			album.song = [];
 		}
-		if (album.coverArt) {
-			album.coverArt = await this.getCoverURL(album.coverArt ?? id);
-		}
+
 		return album;
 	}
 
@@ -171,11 +176,14 @@ export class NavidromeClient {
 
 	private async sanitizeChildren<
 		T extends { coverArt?: string; id?: string; album?: string; name?: string }
-	>(children: T[]): Promise<T[]> {
+	>(children: T[], parentCoverArt?: string): Promise<T[]> {
 		return await Promise.all(
 			children.map(async (child) => {
-				if (child.coverArt && !child.coverArt.startsWith('http')) {
-					child.coverArt = await this.getCoverURL(child.coverArt ?? child.id);
+				const coverArtToUse = parentCoverArt || child.coverArt;
+				if (coverArtToUse && !coverArtToUse.startsWith('http')) {
+					child.coverArt = await this.getCoverURL(coverArtToUse ?? child.id);
+				} else if (coverArtToUse) {
+					child.coverArt = coverArtToUse;
 				}
 				if (!child.album && child.name) child.album = child.name;
 				if (child) return child as any;

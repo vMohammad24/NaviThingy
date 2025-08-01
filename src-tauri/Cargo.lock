@@ -2255,7 +2255,7 @@ dependencies = [
 
 [[package]]
 name = "navithingy"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "discord-rich-presence",
  "named_pipe",
